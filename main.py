@@ -1,5 +1,8 @@
 from estadisticas_ligas import EstadisticasLiga
 import pronostico
+from generar_pronostico_pdf import GenerarPronosticoPDF
+import os
+
 if __name__ == "__main__":
 
 
@@ -65,3 +68,11 @@ if __name__ == "__main__":
         print(df_display)
     else:
         print("No hay partidos pendientes.")
+    
+    # Al final del procesamiento, generar el PDF de la media de goles
+    generador = GenerarPronosticoPDF()
+    archivo = generador.crear_pdf()
+    print(f"PDF generado: {archivo}")
+    # Abrir el PDF automáticamente después de generarlo
+    if os.path.exists(archivo):
+        os.startfile(archivo)

@@ -1,4 +1,7 @@
-from fpdf import FPDF
+try:
+    from fpdf import FPDF
+except ImportError:
+    from fpdf2 import FPDF
 from fpdf.enums import XPos, YPos
 import pronostico
 from estadisticas_ligas import EstadisticasLiga
@@ -14,20 +17,21 @@ def sanitize_text(text):
 
 class PDF(FPDF):
     def header(self):
-        self.set_font('Helvetica', 'B', 12)
-        # We will set title manually per page/chapter, so keep header simple or empty
+        self.set_font('Helvetica', 'B', 14)
+        # Title will be added in each page generation, keep header minimal
 
     def footer(self):
         self.set_y(-15)
-        self.set_font('Helvetica', 'I', 7)
+        self.set_font('Helvetica', 'I', 9)
         self.cell(0, 10, f'Página {self.page_no()}/{{nb}} - Generado el {datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}', 
                   new_x=XPos.RIGHT, new_y=YPos.TOP, align='C')
 
     def add_table_header(self, headers, col_widths):
-        self.set_font('Helvetica', 'B', 7)
+        # Use larger, bold font for table headers
+        self.set_font('Helvetica', 'B', 9)
         self.set_fill_color(200, 220, 255)
         for i, h in enumerate(headers):
-            self.cell(col_widths[i], 8, sanitize_text(h), border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C', fill=True)
+            self.cell(col_widths[i], 10, sanitize_text(h), border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C', fill=True)
         self.ln()
 
     def add_table_row(self, row_data, col_widths, custom_fills=None):
@@ -313,14 +317,16 @@ def generar_pdf_multi_ligas():
         sum_headers = ["Liga", "Fecha", "Partido", "Op 1", "Op 2", "Op 3", "Op 4", "Op 5", "Op 6", "Op 7"]
         sum_widths = [35, 20, 50, 24, 24, 24, 24, 24, 24, 24]
         
-        pdf.set_font('Helvetica', 'B', 8)
+        # Use a clearer, slightly larger font for summary headers
+        pdf.set_font('Helvetica', 'B', 10)
         pdf.set_fill_color(255, 215, 0) # Gold color for winners
         
         for i, h in enumerate(sum_headers):
-            pdf.cell(sum_widths[i], 10, sanitize_text(h), border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C', fill=True)
+            pdf.cell(sum_widths[i], 12, sanitize_text(h), border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C', fill=True)
         pdf.ln()
         
-        pdf.set_font('Helvetica', '', 7) # Smaller font to fit content
+        # Slightly larger font for summary rows
+        pdf.set_font('Helvetica', '', 8)
         for item in resumen_mejores:
             
             # Static row height is fine now since we are not multitasking vertical lists inside cells

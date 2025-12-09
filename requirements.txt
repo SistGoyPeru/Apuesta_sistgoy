@@ -1,5 +1,5 @@
 python-telegram-bot
-fpdf
+fpdf2
 polars
 scipy
 numpy
