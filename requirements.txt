@@ -1,0 +1,7 @@
+python-telegram-bot
+fpdf
+polars
+scipy
+numpy
+requests
+beautifulsoup4
