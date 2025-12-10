@@ -166,7 +166,6 @@ async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
         app.add_handler(conv_handler)
 
-        print("--- BOT INICIADO ---")
         app.run_polling()
 
 
@@ -255,7 +254,6 @@ async def main():
         fallbacks=[CommandHandler("menu", menu)],
     )
     app.add_handler(conv_handler)
-        print("--- BOT INICIADO ---")
 
         import asyncio
         async def main():
