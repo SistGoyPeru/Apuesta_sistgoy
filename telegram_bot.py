@@ -164,7 +164,7 @@ async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         pass
     user = update.effective_user
-    await update.message.reply_text(f"⏳ Generando reporte para ti, {user.first_name}... Esto puede tardar unos minutos.")
+    await update.message.reply_text(f"🔎🤖 Buscando y generando reporte para ti, {user.first_name}... Esto puede tardar unos minutos.")
 
     try:
         # Ejecutar la lógica de generación
@@ -180,6 +180,7 @@ async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Ocurrió un error: {str(e)}")
 
 async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🔎🤖 Buscando partidos de hoy, por favor espera...")
     try:
         with open("LOGO.JPG", "rb") as logo_file:
             await update.message.reply_photo(photo=logo_file)
