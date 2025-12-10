@@ -1,4 +1,5 @@
-from telegram import ReplyKeyboardMarkup, KeyboardButton
+from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
+from telegram.ext import ContextTypes
 # Estados para el ConversationHandler avanzado
 MENU, LIGA, EQUIPO, PARTIDO, TIPO_CONSULTA = range(5)
 def get_ligas_keyboard():
