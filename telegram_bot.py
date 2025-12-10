@@ -15,6 +15,11 @@ logging.basicConfig(
 )
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        with open("LOGO.JPG", "rb") as logo_file:
+            await update.message.reply_photo(photo=logo_file)
+    except Exception:
+        pass
     await update.message.reply_text(
         "<b>🏟️🎲 ¡Bienvenido a SistGoy Apuestas! 🎲🏟️</b>\n\n"
         "<b>Tu casa de apuestas y estadísticas de fútbol 24/7</b> ⚽️🔥\n\n"
