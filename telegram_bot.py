@@ -1,3 +1,17 @@
+if __name__ == "__main__":
+    import os
+    from telegram.ext import ApplicationBuilder, CommandHandler
+    TOKEN = os.getenv("TELEGRAM_TOKEN")
+    if not TOKEN:
+        print("Error: No se encontró la variable de entorno TELEGRAM_TOKEN")
+        exit(1)
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("pdf", generar_reporte))
+    app.add_handler(CommandHandler("hoy", partidos_hoy))
+    # Agrega aquí otros handlers si es necesario
+    print("--- BOT INICIADO ---")
+    app.run_polling()
 from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes
 # Estados para el ConversationHandler avanzado
@@ -196,12 +210,14 @@ async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mensaje_pronosticos = "\nPronósticos de la próxima jornada:\n"
+        hoy = datetime.date.today()
+        partidos_hoy = []
         mensaje = ""
+        # Pronósticos de la próxima jornada
         for nombre_liga, url_liga in LIGAS.items():
             estadisticas = EstadisticasLiga(url_liga)
             pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
             todos = pronostico_poisson.calcular_pronosticos_todos()
-            # Buscar partidos pendientes (ResultadoReal == 'N/A')
             pendientes = [p for p in todos if p.get('ResultadoReal', 'N/A') == 'N/A']
             if pendientes:
                 mensaje_pronosticos += f"\nLiga: {nombre_liga}\n"
@@ -212,19 +228,7 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"Local {p['ProbLocal']:.0f}%, Empate {p['ProbEmpate']:.0f}%, Visita {p['ProbVisita']:.0f}% | "
                         f"Over 2.5: {p.get('ProbOver25', 0):.0f}% | Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%\n"
                     )
-        mensaje += mensaje_pronosticos
-        await update.message.reply_text("🔎🤖 Buscando partidos de hoy, por favor espera...")
-        try:
-            with open("LOGO.JPG", "rb") as logo_file:
-                await update.message.reply_photo(photo=logo_file)
-        except Exception:
-            pass
-        hoy = datetime.date.today()
-        partidos_hoy = []
-        for nombre_liga, url_liga in LIGAS.items():
-            estadisticas = EstadisticasLiga(url_liga)
-            pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
-            todos = pronostico_poisson.calcular_pronosticos_todos()
+            # Partidos de hoy
             for p in todos:
                 fecha_partido = p.get('Fecha')
                 fecha_obj = None
@@ -253,12 +257,17 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"Estado: {estado}\n"
                         "-----------------------------"
                     )
+        mensaje += mensaje_pronosticos
+        await update.message.reply_text("🔎🤖 Buscando partidos de hoy, por favor espera...")
+        try:
+            with open("LOGO.JPG", "rb") as logo_file:
+                await update.message.reply_photo(photo=logo_file)
+        except Exception:
+            pass
         if partidos_hoy:
             mensaje += "\n".join(partidos_hoy)
         else:
             mensaje += "No hay partidos para hoy.\n"
-    else:
-        mensaje += "No hay partidos para hoy.\n"
-    # Mostrar estadísticas de cada liga aunque no haya partidos
-    for nombre_liga, url_liga in LIGAS.items():
-        estadisticas = EstadisticasLiga(url_liga)
+        # Mostrar estadísticas de cada liga aunque no haya partidos
+        for nombre_liga, url_liga in LIGAS.items():
+            estadisticas = EstadisticasLiga(url_liga)
