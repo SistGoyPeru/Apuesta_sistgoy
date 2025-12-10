@@ -169,12 +169,13 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
+        try:
+            loop = asyncio.get_running_loop()
             import nest_asyncio
             nest_asyncio.apply()
             asyncio.ensure_future(main())
-        else:
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
             loop.run_until_complete(main())
     except ImportError:
         raise RuntimeError("nest_asyncio no está instalado. Instálalo con 'pip install nest_asyncio'")
