@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+import io
 import os
 import logging
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
@@ -51,6 +53,10 @@ async def menu_ligas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['ligas_lista'] = ligas
     return ESCOGIENDO_LIGA
 
+from telegram import ReplyKeyboardMarkup
+
+ESCOGIENDO_PARTIDO = 101
+
 async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ligas = context.user_data.get('ligas_lista', list(LIGAS.keys()))
     try:
@@ -63,64 +69,78 @@ async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAUL
     liga = ligas[num-1]
     url_liga = LIGAS[liga]
     estadisticas = EstadisticasLiga(url_liga)
-    total_jugados = estadisticas.total_partidos_jugados()
-    total_liga = estadisticas.total_partidos_liga()
-    goles_prom = estadisticas.media_goles()
-    over_15 = estadisticas.porcentaje_over_15()
-    over_25 = estadisticas.porcentaje_over_25()
-    under_15 = estadisticas.porcentaje_under_15()
-    under_25 = estadisticas.porcentaje_under_25()
-    victorias_local = estadisticas.porcentaje_victorias_local() if hasattr(estadisticas, 'porcentaje_victorias_local') else 0
-    empates = estadisticas.porcentaje_empates() if hasattr(estadisticas, 'porcentaje_empates') else 0
-    victorias_visita = estadisticas.porcentaje_victorias_visita() if hasattr(estadisticas, 'porcentaje_victorias_visita') else 0
-    ambos_marcan = estadisticas.porcentaje_ambos_marcan() if hasattr(estadisticas, 'porcentaje_ambos_marcan') else 0
+    context.user_data['liga_seleccionada'] = liga
+    context.user_data['estadisticas_liga'] = estadisticas
+    # Mostrar próximos partidos como menú
+    partidos = estadisticas.df.filter((estadisticas.df['GA'].is_null()) & (estadisticas.df['GV'].is_null()))
+    if partidos.height == 0:
+        await update.message.reply_text("No hay partidos próximos para esta liga.")
+        return ConversationHandler.END
+    texto = f"<b>Próximos encuentros de {liga}:</b>\n\n"
+    keyboard = []
+    lista_partidos = []
+    for idx, row in enumerate(partidos.iter_rows(named=True), 1):
+        local = row["Local"]
+        visita = row["Visita"]
+        jornada = row.get("Jornada", "")
+        fecha = row.get("Fecha", "")
+        texto += f"{idx}. {local} vs {visita} | Jornada: {jornada} | Fecha: {fecha}\n"
+        keyboard.append([f"{idx}"])
+        lista_partidos.append((local, visita, jornada, fecha))
+    texto += "\nResponde con el número del partido para ver análisis y pronóstico."
+    context.user_data['partidos_liga'] = lista_partidos
+    await update.message.reply_text(texto, parse_mode='HTML', reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True))
+    return ESCOGIENDO_PARTIDO
+
+async def mostrar_analisis_partido(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        num = int(update.message.text.strip())
+        partidos = context.user_data.get('partidos_liga', [])
+        if num < 1 or num > len(partidos):
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text("Por favor, responde con el número del partido.")
+        return ESCOGIENDO_PARTIDO
+    local, visita, jornada, fecha = context.user_data['partidos_liga'][num-1]
+    liga = context.user_data.get('liga_seleccionada', '')
+    estadisticas = context.user_data.get('estadisticas_liga')
+    pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
+    pred = pronostico_poisson.predecir_partido(local, visita)
+    fuerza_local = pronostico_poisson.fuerzas.get(local, {})
+    fuerza_visita = pronostico_poisson.fuerzas.get(visita, {})
     mensaje = (
-        f"<b>Estadísticas de {liga}</b>\n"
-        f"Partidos jugados: {total_jugados}\n"
-        f"Total partidos en liga: {total_liga}\n"
-        f"Promedio de goles por partido: {goles_prom:.2f}\n"
-        f"\n<b>Over/Under:</b>\n"
-        f"Over 1.5: {over_15:.1f}% | Over 2.5: {over_25:.1f}%\n"
-        f"Under 1.5: {under_15:.1f}% | Under 2.5: {under_25:.1f}%\n"
-        f"\n<b>Resultados:</b>\n"
-        f"Victorias local: {victorias_local:.1f}%\n"
-        f"Empates: {empates:.1f}%\n"
-        f"Victorias visita: {victorias_visita:.1f}%\n"
-        f"Ambos marcan: {ambos_marcan:.1f}%\n"
+        f"<b>{liga} - Jornada {jornada} ({fecha})</b>\n"
+        f"<b>{local}</b> vs <b>{visita}</b>\n\n"
+        f"<b>Pronóstico:</b>\n"
+        f"Marcador probable: {pred['MarcadorProbable']}\n"
+        f"Local: {pred['ProbLocal']:.1f}% | Empate: {pred['ProbEmpate']:.1f}% | Visita: {pred['ProbVisita']:.1f}%\n"
+        f"Over 1.5: {pred['ProbOver15']:.1f}% | Over 2.5: {pred['ProbOver25']:.1f}%\n"
+        f"Ambos marcan: Sí {pred['ProbAmbosMarcan']:.1f}% | No {pred['ProbNoAmbosMarcan']:.1f}%\n\n"
+        f"<b>Estadísticas {local} (local):</b>\n"
+        f"Ataque: {fuerza_local.get('local', {}).get('ataque', 0):.2f} | Defensa: {fuerza_local.get('local', {}).get('defensa', 0):.2f}\n"
+        f"<b>Estadísticas {visita} (visita):</b>\n"
+        f"Ataque: {fuerza_visita.get('visita', {}).get('ataque', 0):.2f} | Defensa: {fuerza_visita.get('visita', {}).get('defensa', 0):.2f}\n"
     )
 
-    # Pronósticos de próximos partidos
-    pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
-    partidos = estadisticas.df.filter((estadisticas.df['GA'].is_null()) & (estadisticas.df['GV'].is_null()))
-    if partidos.height > 0:
-        mensaje += "\n<b>Próximos encuentros y pronósticos:</b>\n"
-        for row in partidos.iter_rows(named=True):
-            local = row["Local"]
-            visita = row["Visita"]
-            jornada = row.get("Jornada", "")
-            fecha = row.get("Fecha", "")
-            pred = pronostico_poisson.predecir_partido(local, visita)
-            if pred:
-                mensaje += (
-                    f"\n<b>{local} vs {visita}</b>\n"
-                    f"Jornada: {jornada} | Fecha: {fecha}\n"
-                    f"Marcador probable: {pred['MarcadorProbable']}\n"
-                    f"Local: {pred['ProbLocal']:.1f}% | Empate: {pred['ProbEmpate']:.1f}% | Visita: {pred['ProbVisita']:.1f}%\n"
-                    f"Over 1.5: {pred['ProbOver15']:.1f}% | Over 2.5: {pred['ProbOver25']:.1f}%\n"
-                    f"Ambos marcan: Sí {pred['ProbAmbosMarcan']:.1f}% | No {pred['ProbNoAmbosMarcan']:.1f}%\n"
-                )
-
-    # Estadísticas de cada equipo local y visitante
-    equipos = set(list(estadisticas.df['Local'].to_list()) + list(estadisticas.df['Visita'].to_list()))
-    mensaje += "\n<b>Estadísticas por equipo:</b>\n"
-    for equipo in equipos:
-        fuerza_local = pronostico_poisson.fuerzas.get(equipo, {}).get("local", {})
-        fuerza_visita = pronostico_poisson.fuerzas.get(equipo, {}).get("visita", {})
-        mensaje += (
-            f"\n<b>{equipo}</b>\n"
-            f"Ataque local: {fuerza_local.get('ataque', 0):.2f} | Defensa local: {fuerza_local.get('defensa', 0):.2f}\n"
-            f"Ataque visita: {fuerza_visita.get('ataque', 0):.2f} | Defensa visita: {fuerza_visita.get('defensa', 0):.2f}\n"
-        )
+    # Gráfico de barras comparativo
+    fig, ax = plt.subplots(figsize=(6, 4))
+    categorias = [f"{local}\nAtaque", f"{local}\nDefensa", f"{visita}\nAtaque", f"{visita}\nDefensa"]
+    valores = [
+        fuerza_local.get('local', {}).get('ataque', 0),
+        fuerza_local.get('local', {}).get('defensa', 0),
+        fuerza_visita.get('visita', {}).get('ataque', 0),
+        fuerza_visita.get('visita', {}).get('defensa', 0)
+    ]
+    colores = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0']
+    ax.bar(categorias, valores, color=colores)
+    ax.set_ylabel('Fuerza')
+    ax.set_title('Comparativa Ataque/Defensa')
+    plt.tight_layout()
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    plt.close(fig)
+    await update.message.reply_photo(photo=buf, caption="Comparativa visual de fuerzas de ataque y defensa")
 
     await update.message.reply_text(mensaje, parse_mode='HTML')
     return ConversationHandler.END
@@ -244,7 +264,8 @@ if __name__ == '__main__':
     conv_ligas = ConversationHandler(
         entry_points=[CommandHandler("ligas", menu_ligas)],
         states={
-            ESCOGIENDO_LIGA: [MessageHandler(filters.TEXT & ~filters.COMMAND, mostrar_estadisticas_liga)]
+            ESCOGIENDO_LIGA: [MessageHandler(filters.TEXT & ~filters.COMMAND, mostrar_estadisticas_liga)],
+            ESCOGIENDO_PARTIDO: [MessageHandler(filters.TEXT & ~filters.COMMAND, mostrar_analisis_partido)]
         },
         fallbacks=[CommandHandler("ligas", menu_ligas)]
     )
