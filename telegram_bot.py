@@ -3,6 +3,10 @@ import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from generar_pronosticos_multi_pdf import generar_pdf_multi_ligas
+import pronostico
+from estadisticas_ligas import EstadisticasLiga
+import datetime
+from ligas_config import LIGAS
 
 # Configuración de Logging
 logging.basicConfig(
@@ -33,6 +37,30 @@ async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Ocurrió un error: {str(e)}")
 
+async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    hoy = datetime.date.today()
+    partidos_hoy = []
+    for nombre_liga, url_liga in LIGAS.items():
+        estadisticas = EstadisticasLiga(url_liga)
+        pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
+        todos = pronostico_poisson.calcular_pronosticos_todos()
+        for p in todos:
+            fecha_partido = p.get('Fecha')
+            fecha_obj = None
+            for fmt in ["%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"]:
+                try:
+                    fecha_obj = datetime.datetime.strptime(fecha_partido, fmt).date()
+                    break
+                except Exception:
+                    continue
+            if fecha_obj == hoy and p.get('ResultadoReal', 'N/A') == 'N/A':
+                partidos_hoy.append(f"{nombre_liga}: {p['Local']} vs {p['Visita']} - {p['MarcadorProbable']} ({p['ProbLocal']:.0f}%/{p['ProbEmpate']:.0f}%/{p['ProbVisita']:.0f}%)")
+    if partidos_hoy:
+        mensaje = "Encuentros por jugar hoy:\n" + "\n".join(partidos_hoy)
+    else:
+        mensaje = "No hay partidos pendientes para hoy."
+    await update.message.reply_text(mensaje)
+
 if __name__ == '__main__':
     # Obtener el token de las variables de entorno (seguridad)
     TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -45,6 +73,7 @@ if __name__ == '__main__':
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("pdf", generar_reporte))
+    app.add_handler(CommandHandler("hoy", partidos_hoy))
 
     print("--- BOT INICIADO ---")
     app.run_polling()
