@@ -196,6 +196,7 @@ async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mensaje_pronosticos = "\nPronósticos de la próxima jornada:\n"
+        mensaje = ""
         for nombre_liga, url_liga in LIGAS.items():
             estadisticas = EstadisticasLiga(url_liga)
             pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
@@ -212,50 +213,52 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"Over 2.5: {p.get('ProbOver25', 0):.0f}% | Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%\n"
                     )
         mensaje += mensaje_pronosticos
-    await update.message.reply_text("🔎🤖 Buscando partidos de hoy, por favor espera...")
-    try:
-        with open("LOGO.JPG", "rb") as logo_file:
-            await update.message.reply_photo(photo=logo_file)
-    except Exception:
-        pass
-    hoy = datetime.date.today()
-    partidos_hoy = []
-    for nombre_liga, url_liga in LIGAS.items():
-        estadisticas = EstadisticasLiga(url_liga)
-        pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
-        todos = pronostico_poisson.calcular_pronosticos_todos()
-        for p in todos:
-            fecha_partido = p.get('Fecha')
-            fecha_obj = None
-            if hasattr(fecha_partido, 'year') and hasattr(fecha_partido, 'month') and hasattr(fecha_partido, 'day'):
-                fecha_obj = datetime.date(fecha_partido.year, fecha_partido.month, fecha_partido.day)
-            else:
-                for fmt in ["%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"]:
-                    try:
-                        fecha_obj = datetime.datetime.strptime(str(fecha_partido), fmt).date()
-                        break
-                    except Exception:
-                        continue
-            if fecha_obj == hoy:
-                estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
-                partidos_hoy.append(
-                    f"Liga: {nombre_liga}\n"
-                    f"Jornada: {p.get('Jornada', '')}\n"
-                    f"Fecha: {fecha_obj.strftime('%d/%m/%Y')}\n"
-                    f"Local: {p.get('EquipoLocal', p.get('Local', ''))}\n"
-                    f"Visita: {p.get('EquipoVisita', p.get('Visita', ''))}\n"
-                    f"Marcador Probable: {p['MarcadorProbable']}\n"
-                    f"Probabilidades: Local {p['ProbLocal']:.0f}%, Empate {p['ProbEmpate']:.0f}%, Visita {p['ProbVisita']:.0f}%\n"
-                    f"Doble oportunidad: 1X {p.get('Prob1X', 0):.0f}%, 12 {p.get('Prob12', 0):.0f}%, X2 {p.get('ProbX2', 0):.0f}%\n"
-                    f"Over/Under: Over 0.5 {p.get('ProbOver05', 0):.0f}%, Under 0.5 {p.get('ProbUnder05', 0):.0f}% | Over 1.5 {p.get('ProbOver15', 0):.0f}%, Under 1.5 {p.get('ProbUnder15', 0):.0f}% | Over 2.5 {p.get('ProbOver25', 0):.0f}%, Under 2.5 {p.get('ProbUnder25', 0):.0f}%\n"
-                    f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%, No {p.get('ProbNoAmbosMarcan', 0):.0f}%\n"
-                    f"Estado: {estado}\n"
-                    "-----------------------------"
-                )
-    if partidos_hoy:
-        mensaje = "\n".join(partidos_hoy)
+        await update.message.reply_text("🔎🤖 Buscando partidos de hoy, por favor espera...")
+        try:
+            with open("LOGO.JPG", "rb") as logo_file:
+                await update.message.reply_photo(photo=logo_file)
+        except Exception:
+            pass
+        hoy = datetime.date.today()
+        partidos_hoy = []
+        for nombre_liga, url_liga in LIGAS.items():
+            estadisticas = EstadisticasLiga(url_liga)
+            pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
+            todos = pronostico_poisson.calcular_pronosticos_todos()
+            for p in todos:
+                fecha_partido = p.get('Fecha')
+                fecha_obj = None
+                if hasattr(fecha_partido, 'year') and hasattr(fecha_partido, 'month') and hasattr(fecha_partido, 'day'):
+                    fecha_obj = datetime.date(fecha_partido.year, fecha_partido.month, fecha_partido.day)
+                else:
+                    for fmt in ["%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"]:
+                        try:
+                            fecha_obj = datetime.datetime.strptime(str(fecha_partido), fmt).date()
+                            break
+                        except Exception:
+                            continue
+                if fecha_obj == hoy:
+                    estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
+                    partidos_hoy.append(
+                        f"Liga: {nombre_liga}\n"
+                        f"Jornada: {p.get('Jornada', '')}\n"
+                        f"Fecha: {fecha_obj.strftime('%d/%m/%Y')}\n"
+                        f"Local: {p.get('EquipoLocal', p.get('Local', ''))}\n"
+                        f"Visita: {p.get('EquipoVisita', p.get('Visita', ''))}\n"
+                        f"Marcador Probable: {p['MarcadorProbable']}\n"
+                        f"Probabilidades: Local {p['ProbLocal']:.0f}%, Empate {p['ProbEmpate']:.0f}%, Visita {p['ProbVisita']:.0f}%\n"
+                        f"Doble oportunidad: 1X {p.get('Prob1X', 0):.0f}%, 12 {p.get('Prob12', 0):.0f}%, X2 {p.get('ProbX2', 0):.0f}%\n"
+                        f"Over/Under: Over 0.5 {p.get('ProbOver05', 0):.0f}%, Under 0.5 {p.get('ProbUnder05', 0):.0f}% | Over 1.5 {p.get('ProbOver15', 0):.0f}%, Under 1.5 {p.get('ProbUnder15', 0):.0f}% | Over 2.5 {p.get('ProbOver25', 0):.0f}%, Under 2.5 {p.get('ProbUnder25', 0):.0f}%\n"
+                        f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%, No {p.get('ProbNoAmbosMarcan', 0):.0f}%\n"
+                        f"Estado: {estado}\n"
+                        "-----------------------------"
+                    )
+        if partidos_hoy:
+            mensaje += "\n".join(partidos_hoy)
+        else:
+            mensaje += "No hay partidos para hoy.\n"
     else:
-        mensaje = "No hay partidos para hoy.\n"
+        mensaje += "No hay partidos para hoy.\n"
     # Mostrar estadísticas de cada liga aunque no haya partidos
     for nombre_liga, url_liga in LIGAS.items():
         estadisticas = EstadisticasLiga(url_liga)
