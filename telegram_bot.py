@@ -168,24 +168,15 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
-    except RuntimeError as e:
-        if str(e).startswith('This event loop is already running'):
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
             try:
                 import nest_asyncio
                 nest_asyncio.apply()
             except ImportError:
                 raise RuntimeError("nest_asyncio no está instalado. Instálalo con 'pip install nest_asyncio'")
-            # Ejecutar main en el loop actual
-            import sys
-            if sys.version_info >= (3, 7):
-                coro = main()
-                try:
-                    import asyncio
-                    asyncio.get_event_loop().create_task(coro)
-                except Exception as err:
-                    print(f"Error ejecutando main en el loop existente: {err}")
-            else:
-                raise RuntimeError("Python >= 3.7 es requerido para ejecución asíncrona en entornos con loop activo.")
+            loop.create_task(main())
         else:
-            raise
+            asyncio.run(main())
+    except Exception as e:
+        print(f"Error ejecutando el bot: {e}")
