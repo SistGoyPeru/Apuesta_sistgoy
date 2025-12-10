@@ -139,25 +139,6 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("pdf", generar_reporte))
     app.add_handler(CommandHandler("hoy", partidos_hoy))
-    import os
-    import logging
-    import datetime
-    from telegram import Update
-    from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler
-    from generar_pronosticos_multi_pdf import generar_pdf_multi_ligas
-    import pronostico
-    from estadisticas_ligas import EstadisticasLiga
-    from ligas_config import LIGAS
-
-    # Configuración de Logging
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO
-    )
-
-
-    # ...existing code...
-
     import asyncio
 
     async def main():
@@ -193,5 +174,4 @@ if __name__ == "__main__":
         print("--- BOT INICIADO ---")
         await app.run_polling()
 
-    if __name__ == "__main__":
-        asyncio.run(main())
+    asyncio.run(main())
