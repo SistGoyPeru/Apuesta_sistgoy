@@ -16,13 +16,24 @@ logging.basicConfig(
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "¡Hola! Soy el Bot de SistGoy Apuestas.\n"
-        "Usa /pdf para generar el reporte actualizado de pronósticos."
-    )
+        "<b>🏟️🎲 ¡Bienvenido a SistGoy Apuestas! 🎲🏟️</b>\n\n"
+        "<b>Tu casa de apuestas y estadísticas de fútbol 24/7</b> ⚽️🔥\n\n"
+        "<b>Comandos rápidos:</b>\n"
+        "• <b>/hoy</b> - Partidos y pronósticos del día\n"
+        "• <b>/pdf</b> - Reporte PDF de pronósticos\n"
+        "• <b>/local</b> - Info local de partidos\n"
+        "• <b>/start</b> - Menú principal\n\n"
+        "<b>¿Qué te ofrecemos?</b>\n"
+        "🎯 Pronósticos AI y estadísticas avanzadas\n"
+        "📊 Over/Under, Doble oportunidad, Ambos marcan\n"
+        "💸 ¡Aumenta tus chances y apuesta informado!\n"
+        "📥 Descarga reportes y consulta resultados en tiempo real\n\n"
+        "<i>¡Suerte y que ruede el balón! ⚽️💰</i>"
+    , parse_mode='HTML')
 
 async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    await update.message.reply_text(f"⏳ Generando reporte para ti, {user.first_name}... Esto puede tardar unos minutos.")
+    loading_msg = await update.message.reply_text("⚽️ Generando reporte, por favor espera...")
 
     try:
         # Ejecutar la lógica de generación
@@ -38,6 +49,7 @@ async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Ocurrió un error: {str(e)}")
 
 async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    loading_msg = await update.message.reply_text("⚽️ Buscando partidos de hoy, por favor espera...")
     hoy = datetime.date.today()
     partidos_hoy = []
     for nombre_liga, url_liga in LIGAS.items():
@@ -58,18 +70,21 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         continue
             if fecha_obj == hoy:
                 estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
+                hora = p.get('Hora', '')
+                hora_str = f"Hora: {hora}\n" if hora else ""
                 partidos_hoy.append(
                     f"Liga: {nombre_liga}\n"
                     f"Jornada: {p.get('Jornada', '')}\n"
                     f"Fecha: {fecha_obj.strftime('%d/%m/%Y')}\n"
+                    f"{hora_str}"
                     f"Local: {p.get('EquipoLocal', p.get('Local', ''))}\n"
                     f"Visita: {p.get('EquipoVisita', p.get('Visita', ''))}\n"
                     f"Marcador Probable: {p['MarcadorProbable']}\n"
                     f"Probabilidades: Local {p['ProbLocal']:.0f}%, Empate {p['ProbEmpate']:.0f}%, Visita {p['ProbVisita']:.0f}%\n"
                     f"Doble oportunidad: 1X {p.get('Prob1X', 0):.0f}%, 12 {p.get('Prob12', 0):.0f}%, X2 {p.get('ProbX2', 0):.0f}%\n"
-                    f"Over/Under: Over 0.5 {p.get('ProbOver05', 0):.0f}%, Under 0.5 {p.get('ProbUnder05', 0):.0f}% | Over 1.5 {p.get('ProbOver15', 0):.0f}%, Under 1.5 {p.get('ProbUnder15', 0):.0f}% | Over 2.5 {p.get('ProbOver25', 0):.0f}%, Under 2.5 {p.get('ProbUnder25', 0):.0f}%\n"
+                    f"Over 0.5: {p.get('ProbOver05', 0):.0f}% | Over 1.5: {p.get('ProbOver15', 0):.0f}% | Over 2.5: {p.get('ProbOver25', 0):.0f}%\n"
+                    f"Under 0.5: {p.get('ProbUnder05', 0):.0f}% | Under 1.5: {p.get('ProbUnder15', 0):.0f}% | Under 2.5: {p.get('ProbUnder25', 0):.0f}%\n"
                     f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%, No {p.get('ProbNoAmbosMarcan', 0):.0f}%\n"
-                    f"Posibles resultados: {p.get('PosiblesResultados', 'N/A')}\n"
                     f"Estado: {estado}\n"
                     "-----------------------------"
                 )
