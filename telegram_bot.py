@@ -266,13 +266,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("pdf", generar_reporte))
     app.add_handler(CommandHandler("hoy", partidos_hoy))
 
-    # Handler para botones del menú principal
-    app.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND,
-        menu_principal_handler
-    ))
-
-    # ConversationHandler para menú de ligas
+    # ConversationHandler para menú de ligas (debe ir antes que el handler general de texto)
     conv_ligas = ConversationHandler(
         entry_points=[CommandHandler("ligas", menu_ligas)],
         states={
@@ -282,6 +276,12 @@ if __name__ == '__main__':
         fallbacks=[CommandHandler("ligas", menu_ligas)]
     )
     app.add_handler(conv_ligas)
+
+    # Handler para botones del menú principal
+    app.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        menu_principal_handler
+    ))
 
     print("--- BOT INICIADO ---")
     app.run_polling()
