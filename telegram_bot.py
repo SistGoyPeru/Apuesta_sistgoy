@@ -4,31 +4,42 @@ from ligas_config import LIGAS
 from telegram import Update
 from telegram.ext import ContextTypes
 
-# --- STUBS Y CONSTANTES FALTANTES ---
-                    f"Over/Under: Over 0.5 {p.get('ProbOver05', 0):.0f}%, Under 0.5 {p.get('ProbUnder05', 0):.0f}% | Over 1.5 {p.get('ProbOver15', 0):.0f}%, Under 1.5 {p.get('ProbUnder15', 0):.0f}% | Over 2.5 {p.get('ProbOver25', 0):.0f}%, Under 2.5 {p.get('ProbUnder25', 0):.0f}%\n"
-                    f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%, No {p.get('ProbNoAmbosMarcan', 0):.0f}%\n"
-                    f"Estado: {estado}\n"
-                    "-----------------------------"
-                )
-    mensaje += mensaje_pronosticos
-    await update.message.reply_text("🔎🤖 Buscando partidos de hoy, por favor espera...")
-    try:
-        with open("LOGO.JPG", "rb") as logo_file:
-            await update.message.reply_photo(photo=logo_file, width=800)
-    except Exception:
-        pass
-    if partidos_hoy:
-        mensaje += "\n".join(partidos_hoy)
-    else:
-        mensaje += "No hay partidos para hoy.\n"
-    # Mostrar estadísticas de cada liga aunque no haya partidos
-    for nombre_liga, url_liga in LIGAS.items():
-        estadisticas = EstadisticasLiga(url_liga)
-        total_jugados = estadisticas.total_partidos_jugados()
-        total_liga = estadisticas.total_partidos_liga()
-        goles_prom = estadisticas.media_goles()
-        mensaje += f"\nEstadísticas de {nombre_liga}:\nPartidos jugados: {total_jugados}\nTotal partidos en liga: {total_liga}\nPromedio de goles por partido: {goles_prom:.2f}\n"
-    await update.message.reply_text(mensaje)
+
+
+# --- HANDLERS PARA EL MENU Y CONVERSATION ---
+from telegram import ReplyKeyboardMarkup
+
+async def menu_avanzado(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Menú avanzado (stub)")
+    return LIGA
+
+async def handle_liga(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Liga seleccionada (stub)")
+    return TIPO_CONSULTA
+
+async def handle_tipo_consulta(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Consulta tipo (stub)")
+    return ConversationHandler.END
+
+async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    ligas = list(LIGAS.keys())
+    opciones = ["Pronósticos", "Estadísticas", "Partidos Hoy", "PDF", "Salir"]
+    filas = [ligas[i:i+3] for i in range(0, len(ligas), 3)]
+    filas.append(opciones)
+    teclado = ReplyKeyboardMarkup(filas, resize_keyboard=True)
+    await update.message.reply_text(
+        "Selecciona una liga o una opción:",
+        reply_markup=teclado
+    )
+    return MENU
+
+async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Opción de menú (stub)")
+    return LIGA_ESTADISTICAS
+
+async def handle_liga_estadisticas(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Estadísticas de liga (stub)")
+    return ConversationHandler.END
 
 import asyncio
 
