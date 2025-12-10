@@ -66,6 +66,10 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"Visita: {p.get('EquipoVisita', p.get('Visita', ''))}\n"
                     f"Marcador Probable: {p['MarcadorProbable']}\n"
                     f"Probabilidades: Local {p['ProbLocal']:.0f}%, Empate {p['ProbEmpate']:.0f}%, Visita {p['ProbVisita']:.0f}%\n"
+                    f"Doble oportunidad: 1X {p.get('Prob1X', 0):.0f}%, 12 {p.get('Prob12', 0):.0f}%, X2 {p.get('ProbX2', 0):.0f}%\n"
+                    f"Over/Under: Over 0.5 {p.get('ProbOver05', 0):.0f}%, Under 0.5 {p.get('ProbUnder05', 0):.0f}% | Over 1.5 {p.get('ProbOver15', 0):.0f}%, Under 1.5 {p.get('ProbUnder15', 0):.0f}% | Over 2.5 {p.get('ProbOver25', 0):.0f}%, Under 2.5 {p.get('ProbUnder25', 0):.0f}%\n"
+                    f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%, No {p.get('ProbNoAmbosMarcan', 0):.0f}%\n"
+                    f"Posibles resultados: {p.get('PosiblesResultados', 'N/A')}\n"
                     f"Estado: {estado}\n"
                     "-----------------------------"
                 )
