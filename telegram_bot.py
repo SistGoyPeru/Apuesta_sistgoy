@@ -50,7 +50,8 @@ async def handle_liga_estadisticas(update: Update, context: ContextTypes.DEFAULT
     )
     return ConversationHandler.END
 
-from telegram import ReplyKeyboardMarkup, KeyboardButton
+from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
+from telegram.ext import ContextTypes, MessageHandler, filters, ConversationHandler, ApplicationBuilder, CommandHandler
 def get_ligas_keyboard():
     ligas = list(LIGAS.keys())
     keyboard = [[KeyboardButton(liga)] for liga in ligas[:5]]
