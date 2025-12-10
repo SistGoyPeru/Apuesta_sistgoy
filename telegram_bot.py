@@ -1,3 +1,6 @@
+# --- IMPORTS NECESARIOS PARA LOS HANDLERS ---
+from telegram import Update
+from telegram.ext import ContextTypes
 # --- STUBS DE HANDLERS PRINCIPALES ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Bienvenido a SistGoy Apuestas (stub)")
