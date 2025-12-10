@@ -1,4 +1,12 @@
-from telegram.ext import MessageHandler, filters, ConversationHandler
+import os
+import logging
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler
+from generar_pronosticos_multi_pdf import generar_pdf_multi_ligas
+import pronostico
+from estadisticas_ligas import EstadisticasLiga
+import datetime
+from ligas_config import LIGAS
 
 # Estados para el menú de ligas
 ESCOGIENDO_LIGA = 100
@@ -36,18 +44,6 @@ async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAUL
         parse_mode='HTML'
     )
     return ConversationHandler.END
-
-import os
-import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from generar_pronosticos_multi_pdf import generar_pdf_multi_ligas
-import pronostico
-from estadisticas_ligas import EstadisticasLiga
-import datetime
-from ligas_config import LIGAS
-
-# Configuración de Logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
