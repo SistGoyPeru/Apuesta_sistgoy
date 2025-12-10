@@ -123,6 +123,7 @@ async def mostrar_analisis_partido(update: Update, context: ContextTypes.DEFAULT
     )
 
     # Gráfico de barras comparativo
+    
     fig, ax = plt.subplots(figsize=(6, 4))
     categorias = [f"{local}\nAtaque", f"{local}\nDefensa", f"{visita}\nAtaque", f"{visita}\nDefensa"]
     valores = [
