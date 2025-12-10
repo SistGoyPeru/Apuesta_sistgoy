@@ -1,3 +1,144 @@
+# --- FUNCIONES PARA MENU Y APUESTA ---
+async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "¿Qué información necesitas?\n"
+        "1️⃣ Estadísticas de liga\n"
+        "2️⃣ Resultados de hoy\n"
+        "3️⃣ PDF de pronósticos\n"
+        "Por favor, responde con el número o escribe el nombre de la liga para ver estadísticas."
+    )
+    return MENU
+
+async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip()
+    if text == "1" or "estadistica" in text.lower():
+        ligas_disponibles = "\n".join([f"- {l}" for l in LIGAS.keys()])
+        await update.message.reply_text(
+            "¿De qué liga quieres ver estadísticas? Escribe el nombre exacto.\n"
+            "Ligas disponibles:\n" + ligas_disponibles
+        )
+        return LIGA_ESTADISTICAS
+    elif text == "2" or "resultados" in text.lower():
+        await partidos_hoy(update, context)
+        return ConversationHandler.END
+    elif text == "3" or "pdf" in text.lower():
+        await generar_reporte(update, context)
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text("No entendí tu respuesta. Por favor, responde con 1, 2, 3 o el nombre de la liga.")
+        return MENU
+
+async def handle_liga_estadisticas(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    liga = update.message.text.strip()
+    url_liga = LIGAS.get(liga)
+    if not url_liga:
+        ligas_disponibles = "\n".join([f"- {l}" for l in LIGAS.keys()])
+        await update.message.reply_text(
+            "No encontré esa liga. Por favor, escribe el nombre exacto.\n"
+            "Ligas disponibles:\n" + ligas_disponibles
+        )
+        return LIGA_ESTADISTICAS
+    estadisticas = EstadisticasLiga(url_liga)
+    total_jugados = estadisticas.total_partidos_jugados()
+    total_liga = estadisticas.total_partidos_liga()
+    goles_prom = estadisticas.media_goles()
+    await update.message.reply_text(
+        f"Estadísticas de {liga}:\n"
+        f"Partidos jugados: {total_jugados}\n"
+        f"Total partidos en liga: {total_liga}\n"
+        f"Promedio de goles por partido: {goles_prom:.2f}"
+    )
+    return ConversationHandler.END
+
+from telegram import ReplyKeyboardMarkup, KeyboardButton
+def get_ligas_keyboard():
+    ligas = list(LIGAS.keys())
+    keyboard = [[KeyboardButton(liga)] for liga in ligas[:5]]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+async def menu_avanzado(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        with open("LOGO.JPG", "rb") as logo_file:
+            await update.message.reply_photo(photo=logo_file)
+    except Exception:
+        pass
+    await update.message.reply_text(
+        "Bienvenido al bot avanzado de apuestas.\nElige una liga:",
+        reply_markup=get_ligas_keyboard()
+    )
+    return LIGA
+
+async def handle_liga(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    liga = update.message.text.strip()
+    if liga not in LIGAS:
+        await update.message.reply_text("Liga no encontrada. Elige una opción del teclado.", reply_markup=get_ligas_keyboard())
+        return LIGA
+    context.user_data['liga'] = liga
+    await update.message.reply_text(
+        f"Liga seleccionada: {liga}\n¿Quieres ver estadísticas, partidos, o pronósticos?",
+        reply_markup=ReplyKeyboardMarkup([
+            [KeyboardButton("Estadísticas")],
+            [KeyboardButton("Partidos")],
+            [KeyboardButton("Pronósticos")]
+        ], resize_keyboard=True)
+    )
+    return TIPO_CONSULTA
+
+async def handle_tipo_consulta(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tipo = update.message.text.strip().lower()
+    liga = context.user_data.get('liga')
+    url_liga = LIGAS.get(liga)
+    estadisticas = EstadisticasLiga(url_liga)
+    if tipo == "estadísticas":
+        total_jugados = estadisticas.total_partidos_jugados()
+        total_liga = estadisticas.total_partidos_liga()
+        goles_prom = estadisticas.media_goles()
+        await update.message.reply_text(
+            f"Estadísticas de {liga}:\nPartidos jugados: {total_jugados}\nTotal partidos: {total_liga}\nPromedio de goles: {goles_prom:.2f}"
+        )
+        return ConversationHandler.END
+    elif tipo == "partidos":
+        hoy = datetime.date.today()
+        partidos = []
+        pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
+        todos = pronostico_poisson.calcular_pronosticos_todos()
+        for p in todos:
+            fecha_partido = p.get('Fecha')
+            fecha_obj = None
+            if hasattr(fecha_partido, 'year') and hasattr(fecha_partido, 'month') and hasattr(fecha_partido, 'day'):
+                fecha_obj = datetime.date(fecha_partido.year, fecha_partido.month, fecha_partido.day)
+            else:
+                for fmt in ["%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"]:
+                    try:
+                        fecha_obj = datetime.datetime.strptime(str(fecha_partido), fmt).date()
+                        break
+                    except Exception:
+                        continue
+            if fecha_obj == hoy:
+                partidos.append(f"{p.get('EquipoLocal', p.get('Local', ''))} vs {p.get('EquipoVisita', p.get('Visita', ''))} - {p['MarcadorProbable']} [{p.get('ResultadoReal', 'N/A')}]")
+        if partidos:
+            await update.message.reply_text("Partidos de hoy:\n" + "\n".join(partidos))
+        else:
+            await update.message.reply_text("No hay partidos para hoy en esta liga.")
+        return ConversationHandler.END
+    elif tipo == "pronósticos":
+        pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
+        todos = pronostico_poisson.calcular_pronosticos_todos()
+        top_pronos = []
+        for p in todos:
+            top = max([
+                (k, p.get(k, 0)) for k in ['ProbLocal','ProbEmpate','ProbVisita']
+            ], key=lambda x: float(str(x[1]).replace('%','')))
+            top_pronos.append(f"{p.get('EquipoLocal', p.get('Local', ''))} vs {p.get('EquipoVisita', p.get('Visita', ''))}: {top[0]} {float(str(top[1]).replace('%','')):.0f}%")
+        if top_pronos:
+            await update.message.reply_text("Top pronósticos:\n" + "\n".join(top_pronos))
+        else:
+            await update.message.reply_text("No hay pronósticos disponibles para esta liga.")
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text("Opción no reconocida. Elige una opción del teclado.")
+        return TIPO_CONSULTA
+
 from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes, MessageHandler, filters, ConversationHandler, ApplicationBuilder, CommandHandler
 import os
@@ -22,12 +163,7 @@ logging.basicConfig(
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         with open("LOGO.JPG", "rb") as logo_file:
-            await update.message.reply_photo(photo=logo_file)
-    except Exception:
-        pass
-    try:
-        with open("LOGO.JPG", "rb") as logo_file:
-            await update.message.reply_photo(photo=logo_file)
+            await update.message.reply_photo(photo=logo_file, width=800)
     except Exception:
         pass
     await update.message.reply_text(
@@ -40,7 +176,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         with open("LOGO.JPG", "rb") as logo_file:
-            await update.message.reply_photo(photo=logo_file)
+            await update.message.reply_photo(photo=logo_file, width=800)
     except Exception:
         pass
     user = update.effective_user
@@ -103,9 +239,14 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔎🤖 Buscando partidos de hoy, por favor espera...")
     try:
         with open("LOGO.JPG", "rb") as logo_file:
-            await update.message.reply_photo(photo=logo_file)
+            await update.message.reply_photo(photo=logo_file, width=800)
     except Exception:
         pass
+        try:
+            with open("LOGO.JPG", "rb") as logo_file:
+                await update.message.reply_photo(photo=logo_file, width=800)
+        except Exception:
+            pass
     if partidos_hoy:
         mensaje += "\n".join(partidos_hoy)
     else:
@@ -129,7 +270,28 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("pdf", generar_reporte))
     app.add_handler(CommandHandler("hoy", partidos_hoy))
-    # Agrega aquí otros handlers si es necesario
+    # ConversationHandler avanzado con menú y botones
+    from telegram.ext import ConversationHandler, MessageHandler, filters
+    conv_handler_adv = ConversationHandler(
+        entry_points=[CommandHandler("apuesta", menu_avanzado)],
+        states={
+            LIGA: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liga)],
+            TIPO_CONSULTA: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_tipo_consulta)],
+        },
+        fallbacks=[CommandHandler("apuesta", menu_avanzado)],
+    )
+    app.add_handler(conv_handler_adv)
+
+    # ConversationHandler para menú interactivo
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("menu", menu)],
+        states={
+            MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu)],
+            LIGA_ESTADISTICAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liga_estadisticas)],
+        },
+        fallbacks=[CommandHandler("menu", menu)],
+    )
+    app.add_handler(conv_handler)
     print("--- BOT INICIADO ---")
     app.run_polling()
 import os
@@ -151,7 +313,7 @@ logging.basicConfig(
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         with open("LOGO.JPG", "rb") as logo_file:
-            await update.message.reply_photo(photo=logo_file)
+            await update.message.reply_photo(photo=logo_file, width=800)
     except Exception:
         pass
     try:
