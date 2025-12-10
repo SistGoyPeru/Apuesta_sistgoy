@@ -1,3 +1,6 @@
+...existing code...
+
+# BLOQUE PRINCIPAL AL FINAL
 if __name__ == "__main__":
     import os
     from telegram.ext import ApplicationBuilder, CommandHandler
