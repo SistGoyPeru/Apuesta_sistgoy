@@ -74,7 +74,10 @@ async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAUL
     # Mostrar próximos partidos como menú
     partidos = estadisticas.df.filter((estadisticas.df['GA'].is_null()) & (estadisticas.df['GV'].is_null()))
     if partidos.height == 0:
-        await update.message.reply_text("No hay partidos próximos para esta liga.")
+        await update.message.reply_text(
+            "No hay partidos próximos para esta liga. Puedes volver al menú principal con /start.",
+            reply_markup=ReplyKeyboardMarkup([["Menú principal"]], resize_keyboard=True)
+        )
         return ConversationHandler.END
     texto = f"<b>Próximos encuentros de {liga}:</b>\n\n"
     keyboard = []
@@ -108,6 +111,12 @@ async def mostrar_analisis_partido(update: Update, context: ContextTypes.DEFAULT
     pred = pronostico_poisson.predecir_partido(local, visita)
     fuerza_local = pronostico_poisson.fuerzas.get(local, {})
     fuerza_visita = pronostico_poisson.fuerzas.get(visita, {})
+    if not pred:
+        await update.message.reply_text(
+            "No hay datos suficientes para mostrar el pronóstico de este partido. Puedes intentar con otro partido o volver al menú principal con /start.",
+            reply_markup=ReplyKeyboardMarkup([["Menú principal"]], resize_keyboard=True)
+        )
+        return ConversationHandler.END
     mensaje = (
         f"<b>{liga} - Jornada {jornada} ({fecha})</b>\n"
         f"<b>{local}</b> vs <b>{visita}</b>\n\n"
@@ -123,27 +132,29 @@ async def mostrar_analisis_partido(update: Update, context: ContextTypes.DEFAULT
     )
 
     # Gráfico de barras comparativo
-    
-    fig, ax = plt.subplots(figsize=(6, 4))
-    categorias = [f"{local}\nAtaque", f"{local}\nDefensa", f"{visita}\nAtaque", f"{visita}\nDefensa"]
-    valores = [
-        fuerza_local.get('local', {}).get('ataque', 0),
-        fuerza_local.get('local', {}).get('defensa', 0),
-        fuerza_visita.get('visita', {}).get('ataque', 0),
-        fuerza_visita.get('visita', {}).get('defensa', 0)
-    ]
-    colores = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0']
-    ax.bar(categorias, valores, color=colores)
-    ax.set_ylabel('Fuerza')
-    ax.set_title('Comparativa Ataque/Defensa')
-    plt.tight_layout()
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close(fig)
-    await update.message.reply_photo(photo=buf, caption="Comparativa visual de fuerzas de ataque y defensa")
+    try:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        categorias = [f"{local}\nAtaque", f"{local}\nDefensa", f"{visita}\nAtaque", f"{visita}\nDefensa"]
+        valores = [
+            fuerza_local.get('local', {}).get('ataque', 0),
+            fuerza_local.get('local', {}).get('defensa', 0),
+            fuerza_visita.get('visita', {}).get('ataque', 0),
+            fuerza_visita.get('visita', {}).get('defensa', 0)
+        ]
+        colores = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0']
+        ax.bar(categorias, valores, color=colores)
+        ax.set_ylabel('Fuerza')
+        ax.set_title('Comparativa Ataque/Defensa')
+        plt.tight_layout()
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        plt.close(fig)
+        await update.message.reply_photo(photo=buf, caption="Comparativa visual de fuerzas de ataque y defensa")
+    except Exception:
+        await update.message.reply_text("No se pudo generar el gráfico. Puedes volver al menú principal con /start.")
 
-    await update.message.reply_text(mensaje, parse_mode='HTML')
+    await update.message.reply_text(mensaje, parse_mode='HTML', reply_markup=ReplyKeyboardMarkup([["Menú principal"]], resize_keyboard=True))
     return ConversationHandler.END
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
