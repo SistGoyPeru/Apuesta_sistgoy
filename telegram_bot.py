@@ -135,14 +135,8 @@ if __name__ == "__main__":
     if not TOKEN:
         print("Error: No se encontró la variable de entorno TELEGRAM_TOKEN")
         exit(1)
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("pdf", generar_reporte))
-    app.add_handler(CommandHandler("hoy", partidos_hoy))
-    import asyncio
-
-    async def main():
-        TOKEN = os.getenv("TELEGRAM_TOKEN")
+    app = ApplicationBuilder().token(TOKEN).build
+                          KEN")
         if not TOKEN:
             print("Error: No se encontró la variable de entorno TELEGRAM_TOKEN")
             exit(1)
@@ -174,14 +168,17 @@ if __name__ == "__main__":
         print("--- BOT INICIADO ---")
         await app.run_polling()
 
+    import asyncio
     try:
-        import asyncio
         asyncio.run(main())
     except RuntimeError as e:
         if str(e).startswith('This event loop is already running'):
-            import asyncio
+            try:
+                import nest_asyncio
+                nest_asyncio.apply()
+            except ImportError:
+                raise RuntimeError("nest_asyncio no está instalado. Instálalo con 'pip install nest_asyncio'")
             loop = asyncio.get_event_loop()
-            loop.create_task(main())
-            loop.run_forever()
+            loop.run_until_complete(main())
         else:
             raise

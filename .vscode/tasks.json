@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Instalar nest_asyncio",
+			"type": "shell",
+			"command": "pip install nest_asyncio",
+			"group": "build"
+		}
+	]
+}
