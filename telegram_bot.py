@@ -255,6 +255,7 @@ if __name__ == '__main__':
         },
         fallbacks=[CommandHandler("menu", menu)],
     )
+    
     app.add_handler(conv_handler)
 
     print("--- BOT INICIADO ---")
