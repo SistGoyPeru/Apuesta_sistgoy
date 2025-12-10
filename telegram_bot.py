@@ -61,6 +61,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>Comandos rápidos:</b>\n"
         "• <b>/hoy</b> - Partidos y pronósticos del día\n"
         "• <b>/pdf</b> - Reporte PDF de pronósticos\n"
+        "• <b>/ligas</b> - Menú de ligas y estadísticas\n"
         "• <b>/start</b> - Menú principal\n\n"
         "<b>¿Qué te ofrecemos?</b>\n"
         "🎯 Pronósticos AI y estadísticas avanzadas\n"
