@@ -176,7 +176,16 @@ if __name__ == "__main__":
                 nest_asyncio.apply()
             except ImportError:
                 raise RuntimeError("nest_asyncio no está instalado. Instálalo con 'pip install nest_asyncio'")
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(main())
+            # Ejecutar main en el loop actual
+            import sys
+            if sys.version_info >= (3, 7):
+                coro = main()
+                try:
+                    import asyncio
+                    asyncio.get_event_loop().create_task(coro)
+                except Exception as err:
+                    print(f"Error ejecutando main en el loop existente: {err}")
+            else:
+                raise RuntimeError("Python >= 3.7 es requerido para ejecución asíncrona en entornos con loop activo.")
         else:
             raise
