@@ -1,3 +1,42 @@
+from telegram.ext import MessageHandler, filters, ConversationHandler
+
+# Estados para el menú de ligas
+ESCOGIENDO_LIGA = 100
+
+async def menu_ligas(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    ligas = list(LIGAS.keys())
+    texto = "<b>Menú de Ligas Disponibles</b>\n\n"
+    for idx, liga in enumerate(ligas, 1):
+        texto += f"{idx}. {liga}\n"
+    texto += "\nEscribe el número de la liga para ver sus estadísticas."
+    await update.message.reply_text(texto, parse_mode='HTML')
+    context.user_data['ligas_lista'] = ligas
+    return ESCOGIENDO_LIGA
+
+async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    ligas = context.user_data.get('ligas_lista', list(LIGAS.keys()))
+    try:
+        num = int(update.message.text.strip())
+        if num < 1 or num > len(ligas):
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text("Por favor, responde con el número de la liga.")
+        return ESCOGIENDO_LIGA
+    liga = ligas[num-1]
+    url_liga = LIGAS[liga]
+    estadisticas = EstadisticasLiga(url_liga)
+    total_jugados = estadisticas.total_partidos_jugados()
+    total_liga = estadisticas.total_partidos_liga()
+    goles_prom = estadisticas.media_goles()
+    await update.message.reply_text(
+        f"<b>Estadísticas de {liga}</b>\n"
+        f"Partidos jugados: {total_jugados}\n"
+        f"Total partidos en liga: {total_liga}\n"
+        f"Promedio de goles por partido: {goles_prom:.2f}",
+        parse_mode='HTML'
+    )
+    return ConversationHandler.END
+
 import os
 import logging
 from telegram import Update
@@ -99,9 +138,9 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(mensaje)
 
 if __name__ == '__main__':
+        # ConversationHandler para menú de ligas
     # Obtener el token de las variables de entorno (seguridad)
     TOKEN = os.getenv("TELEGRAM_TOKEN")
-    
     if not TOKEN:
         print("Error: No se encontró la variable de entorno TELEGRAM_TOKEN")
         exit(1)
@@ -111,6 +150,16 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("pdf", generar_reporte))
     app.add_handler(CommandHandler("hoy", partidos_hoy))
+
+    # ConversationHandler para menú de ligas
+    conv_ligas = ConversationHandler(
+        entry_points=[CommandHandler("ligas", menu_ligas)],
+        states={
+            ESCOGIENDO_LIGA: [MessageHandler(filters.TEXT & ~filters.COMMAND, mostrar_estadisticas_liga)]
+        },
+        fallbacks=[CommandHandler("ligas", menu_ligas)]
+    )
+    app.add_handler(conv_ligas)
 
     print("--- BOT INICIADO ---")
     app.run_polling()
