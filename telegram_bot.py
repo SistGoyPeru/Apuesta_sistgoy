@@ -129,46 +129,44 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "-----------------------------"
                 )
 
+
 # --- BLOQUE PRINCIPAL ---
-if __name__ == "__main__":
+import asyncio
+
+async def main():
     TOKEN = os.getenv("TELEGRAM_TOKEN")
     if not TOKEN:
         print("Error: No se encontró la variable de entorno TELEGRAM_TOKEN")
         exit(1)
-    app = ApplicationBuilder().token(TOKEN).build
-                          KEN")
-        if not TOKEN:
-            print("Error: No se encontró la variable de entorno TELEGRAM_TOKEN")
-            exit(1)
-        app = ApplicationBuilder().token(TOKEN).build()
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("pdf", generar_reporte))
-        app.add_handler(CommandHandler("hoy", partidos_hoy))
-        # ConversationHandler avanzado con menú y botones
-        conv_handler_adv = ConversationHandler(
-            entry_points=[CommandHandler("apuesta", menu_avanzado)],
-            states={
-                LIGA: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liga)],
-                TIPO_CONSULTA: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_tipo_consulta)],
-            },
-            fallbacks=[CommandHandler("apuesta", menu_avanzado)],
-        )
-        app.add_handler(conv_handler_adv)
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("pdf", generar_reporte))
+    app.add_handler(CommandHandler("hoy", partidos_hoy))
+    # ConversationHandler avanzado con menú y botones
+    conv_handler_adv = ConversationHandler(
+        entry_points=[CommandHandler("apuesta", menu_avanzado)],
+        states={
+            LIGA: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liga)],
+            TIPO_CONSULTA: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_tipo_consulta)],
+        },
+        fallbacks=[CommandHandler("apuesta", menu_avanzado)],
+    )
+    app.add_handler(conv_handler_adv)
 
-        # ConversationHandler para menú interactivo
-        conv_handler = ConversationHandler(
-            entry_points=[CommandHandler("menu", menu)],
-            states={
-                MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu)],
-                LIGA_ESTADISTICAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liga_estadisticas)],
-            },
-            fallbacks=[CommandHandler("menu", menu)],
-        )
-        app.add_handler(conv_handler)
-        print("--- BOT INICIADO ---")
-        await app.run_polling()
+    # ConversationHandler para menú interactivo
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("menu", menu)],
+        states={
+            MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu)],
+            LIGA_ESTADISTICAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liga_estadisticas)],
+        },
+        fallbacks=[CommandHandler("menu", menu)],
+    )
+    app.add_handler(conv_handler)
+    print("--- BOT INICIADO ---")
+    await app.run_polling()
 
-    import asyncio
+if __name__ == "__main__":
     try:
         asyncio.run(main())
     except RuntimeError as e:
