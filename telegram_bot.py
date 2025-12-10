@@ -170,24 +170,12 @@ if __name__ == "__main__":
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            try:
-                import nest_asyncio
-                nest_asyncio.apply()
-            except ImportError:
-                raise RuntimeError("nest_asyncio no está instalado. Instálalo con 'pip install nest_asyncio'")
-            # Solo crear la tarea, no esperar ni cerrar el loop
-            loop.create_task(main())
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                try:
-                    import nest_asyncio
-                    nest_asyncio.apply()
-                except ImportError:
-                    raise RuntimeError("nest_asyncio no está instalado. Instálalo con 'pip install nest_asyncio'")
-                # Solo crear la tarea, no cerrar el loop
-                asyncio.ensure_future(main())
-            else:
-                loop.run_until_complete(main())
-        except Exception as e:
-            print(f"Error ejecutando el bot: {e}")
+            import nest_asyncio
+            nest_asyncio.apply()
+            asyncio.ensure_future(main())
+        else:
+            loop.run_until_complete(main())
+    except ImportError:
+        raise RuntimeError("nest_asyncio no está instalado. Instálalo con 'pip install nest_asyncio'")
+    except Exception as e:
+        print(f"Error ejecutando el bot: {e}")
