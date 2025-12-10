@@ -255,23 +255,23 @@ async def main():
     )
     app.add_handler(conv_handler)
 
-        import asyncio
-        async def main():
-            await app.run_polling()
+    import asyncio
+    async def main():
+     await app.run_polling()
 
+    try:
         try:
-            try:
-                loop = asyncio.get_running_loop()
-                import nest_asyncio
-                nest_asyncio.apply()
-                asyncio.ensure_future(main())
-            except RuntimeError:
-                loop = asyncio.get_event_loop()
-                loop.run_until_complete(main())
-        except ImportError:
-            raise RuntimeError("nest_asyncio no está instalado. Instálalo con 'pip install nest_asyncio'")
-        except Exception as e:
-            print(f"Error ejecutando el bot: {e}")
+            loop = asyncio.get_running_loop()
+            import nest_asyncio
+            nest_asyncio.apply()
+            asyncio.ensure_future(main())
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(main())
+    except ImportError:
+        raise RuntimeError("nest_asyncio no está instalado. Instálalo con 'pip install nest_asyncio'")
+    except Exception as e:
+        print(f"Error ejecutando el bot: {e}")
 
 if __name__ == "__main__":
     try:
