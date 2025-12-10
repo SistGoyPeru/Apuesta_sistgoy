@@ -1,6 +1,26 @@
+async def menu_principal_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    texto = update.message.text
+    if texto == "📅 Partidos de Hoy":
+        await partidos_hoy(update, context)
+    elif texto == "📊 Ligas y Estadísticas":
+        await menu_ligas(update, context)
+    elif texto == "📄 Reporte PDF":
+        await generar_reporte(update, context)
+    elif texto == "ℹ️ Ayuda":
+        await update.message.reply_text(
+            "<b>Ayuda SistGoy</b>\n\n"
+            "• <b>Partidos de Hoy:</b> Muestra los partidos y pronósticos del día.\n"
+            "• <b>Ligas y Estadísticas:</b> Consulta estadísticas y pronósticos de cada liga.\n"
+            "• <b>Reporte PDF:</b> Descarga un reporte completo de pronósticos.\n"
+            "• <b>Menú principal:</b> Vuelve a la portada.\n\n"
+            "<i>Para cualquier consulta, escribe /start para volver al menú principal.</i>",
+            parse_mode='HTML'
+        )
+    else:
+        await update.message.reply_text("Por favor, selecciona una opción válida del menú.")
 import os
 import logging
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler
 from generar_pronosticos_multi_pdf import generar_pdf_multi_ligas
 import pronostico
@@ -44,7 +64,7 @@ async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAUL
     empates = estadisticas.porcentaje_empates() if hasattr(estadisticas, 'porcentaje_empates') else 0
     victorias_visita = estadisticas.porcentaje_victorias_visita() if hasattr(estadisticas, 'porcentaje_victorias_visita') else 0
     ambos_marcan = estadisticas.porcentaje_ambos_marcan() if hasattr(estadisticas, 'porcentaje_ambos_marcan') else 0
-    await update.message.reply_text(
+    mensaje = (
         f"<b>Estadísticas de {liga}</b>\n"
         f"Partidos jugados: {total_jugados}\n"
         f"Total partidos en liga: {total_liga}\n"
@@ -56,9 +76,43 @@ async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAUL
         f"Victorias local: {victorias_local:.1f}%\n"
         f"Empates: {empates:.1f}%\n"
         f"Victorias visita: {victorias_visita:.1f}%\n"
-        f"Ambos marcan: {ambos_marcan:.1f}%\n",
-        parse_mode='HTML'
+        f"Ambos marcan: {ambos_marcan:.1f}%\n"
     )
+
+    # Pronósticos de próximos partidos
+    pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
+    partidos = estadisticas.df.filter((estadisticas.df['GA'].is_null()) & (estadisticas.df['GV'].is_null()))
+    if partidos.height > 0:
+        mensaje += "\n<b>Próximos encuentros y pronósticos:</b>\n"
+        for row in partidos.iter_rows(named=True):
+            local = row["Local"]
+            visita = row["Visita"]
+            jornada = row.get("Jornada", "")
+            fecha = row.get("Fecha", "")
+            pred = pronostico_poisson.predecir_partido(local, visita)
+            if pred:
+                mensaje += (
+                    f"\n<b>{local} vs {visita}</b>\n"
+                    f"Jornada: {jornada} | Fecha: {fecha}\n"
+                    f"Marcador probable: {pred['MarcadorProbable']}\n"
+                    f"Local: {pred['ProbLocal']:.1f}% | Empate: {pred['ProbEmpate']:.1f}% | Visita: {pred['ProbVisita']:.1f}%\n"
+                    f"Over 1.5: {pred['ProbOver15']:.1f}% | Over 2.5: {pred['ProbOver25']:.1f}%\n"
+                    f"Ambos marcan: Sí {pred['ProbAmbosMarcan']:.1f}% | No {pred['ProbNoAmbosMarcan']:.1f}%\n"
+                )
+
+    # Estadísticas de cada equipo local y visitante
+    equipos = set(list(estadisticas.df['Local'].to_list()) + list(estadisticas.df['Visita'].to_list()))
+    mensaje += "\n<b>Estadísticas por equipo:</b>\n"
+    for equipo in equipos:
+        fuerza_local = pronostico_poisson.fuerzas.get(equipo, {}).get("local", {})
+        fuerza_visita = pronostico_poisson.fuerzas.get(equipo, {}).get("visita", {})
+        mensaje += (
+            f"\n<b>{equipo}</b>\n"
+            f"Ataque local: {fuerza_local.get('ataque', 0):.2f} | Defensa local: {fuerza_local.get('defensa', 0):.2f}\n"
+            f"Ataque visita: {fuerza_visita.get('ataque', 0):.2f} | Defensa visita: {fuerza_visita.get('defensa', 0):.2f}\n"
+        )
+
+    await update.message.reply_text(mensaje, parse_mode='HTML')
     return ConversationHandler.END
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -71,21 +125,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_photo(photo=logo_file, caption="\n\n", width=512)
     except Exception:
         pass
-    await update.message.reply_text(
+
+    # Menú principal con botones
+    keyboard = [
+        [KeyboardButton("📅 Partidos de Hoy"), KeyboardButton("📊 Ligas y Estadísticas")],
+        [KeyboardButton("📄 Reporte PDF"), KeyboardButton("ℹ️ Ayuda")]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+    bienvenida = (
         "<b>🏟️🎲 ¡Bienvenido a SistGoy Apuestas! 🎲🏟️</b>\n\n"
         "<b>Tu casa de apuestas y estadísticas de fútbol 24/7</b> ⚽️🔥\n\n"
-        "<b>Comandos rápidos:</b>\n"
-        "• <b>/hoy</b> - Partidos y pronósticos del día\n"
-        "• <b>/pdf</b> - Reporte PDF de pronósticos\n"
-        "• <b>/ligas</b> - Menú de ligas y estadísticas\n"
-        "• <b>/start</b> - Menú principal\n\n"
+        "<b>Menú principal:</b>\n"
+        "Selecciona una opción con los botones de abajo 👇\n\n"
         "<b>¿Qué te ofrecemos?</b>\n"
         "🎯 Pronósticos AI y estadísticas avanzadas\n"
         "📊 Over/Under, Doble oportunidad, Ambos marcan\n"
         "💸 ¡Aumenta tus chances y apuesta informado!\n"
         "📥 Descarga reportes y consulta resultados en tiempo real\n\n"
         "<i>¡Suerte y que ruede el balón! ⚽️💰</i>"
-    , parse_mode='HTML')
+    )
+    await update.message.reply_text(bienvenida, parse_mode='HTML', reply_markup=reply_markup)
 
 async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -163,6 +223,12 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("pdf", generar_reporte))
     app.add_handler(CommandHandler("hoy", partidos_hoy))
+
+    # Handler para botones del menú principal
+    app.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        menu_principal_handler
+    ))
 
     # ConversationHandler para menú de ligas
     conv_ligas = ConversationHandler(
