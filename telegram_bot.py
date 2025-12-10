@@ -117,7 +117,11 @@ async def handle_liga_estadisticas(update: Update, context: ContextTypes.DEFAULT
     liga = update.message.text.strip()
     url_liga = LIGAS.get(liga)
     if not url_liga:
-        await update.message.reply_text("No encontré esa liga. Por favor, escribe el nombre exacto como aparece en el menú.")
+        ligas_disponibles = "\n".join([f"- {l}" for l in LIGAS.keys()])
+        await update.message.reply_text(
+            "No encontré esa liga. Por favor, escribe el nombre exacto.\n"
+            "Ligas disponibles:\n" + ligas_disponibles
+        )
         return LIGA_ESTADISTICAS
     estadisticas = EstadisticasLiga(url_liga)
     total_jugados = estadisticas.total_partidos_jugados()
@@ -153,8 +157,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         pass
     await update.message.reply_text(
-        "¡Hola! Soy el Bot de SistGoy Apuestas.\n"
-        "Usa /pdf para generar el reporte actualizado de pronósticos."
+        "👋 Bienvenido a SistGoy Apuestas ⚽️\n"
+        "Aquí puedes consultar pronósticos, estadísticas y resultados de fútbol en tiempo real.\n"
+        "Utiliza los comandos /pdf, /hoy, /apuesta o /menu para comenzar.\n"
+        "¿Qué necesitas hoy?"
     )
 
 async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
