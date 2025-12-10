@@ -47,12 +47,16 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for p in todos:
             fecha_partido = p.get('Fecha')
             fecha_obj = None
-            for fmt in ["%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"]:
-                try:
-                    fecha_obj = datetime.datetime.strptime(fecha_partido, fmt).date()
-                    break
-                except Exception:
-                    continue
+            # Si ya es tipo date, úsalo directo
+            if hasattr(fecha_partido, 'year') and hasattr(fecha_partido, 'month') and hasattr(fecha_partido, 'day'):
+                fecha_obj = datetime.date(fecha_partido.year, fecha_partido.month, fecha_partido.day)
+            else:
+                for fmt in ["%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"]:
+                    try:
+                        fecha_obj = datetime.datetime.strptime(str(fecha_partido), fmt).date()
+                        break
+                    except Exception:
+                        continue
             if fecha_obj == hoy:
                 estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
                 partidos_hoy.append(f"{nombre_liga}: {p['Local']} vs {p['Visita']} - {p['MarcadorProbable']} ({p['ProbLocal']:.0f}%/{p['ProbEmpate']:.0f}%/{p['ProbVisita']:.0f}%) [{estado}]")
