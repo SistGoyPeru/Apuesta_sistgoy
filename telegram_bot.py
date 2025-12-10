@@ -21,8 +21,21 @@ async def handle_liga(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Liga seleccionada (stub)")
     return TIPO_CONSULTA
 
+from telegram import ReplyKeyboardMarkup
+
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Menú principal (stub)")
+    # Ejemplo de menú con ligas y opciones principales
+    # Usar las ligas reales de la variable LIGAS
+    ligas = list(LIGAS.keys())
+    opciones = ["Pronósticos", "Estadísticas", "Partidos Hoy", "PDF", "Salir"]
+    # Organizar el teclado en filas de ligas y luego opciones
+    filas = [ligas[i:i+3] for i in range(0, len(ligas), 3)]  # Máx 3 ligas por fila
+    filas.append(opciones)
+    teclado = ReplyKeyboardMarkup(filas, resize_keyboard=True)
+    await update.message.reply_text(
+        "Selecciona una liga o una opción:",
+        reply_markup=teclado
+    )
     return MENU
 
 async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
