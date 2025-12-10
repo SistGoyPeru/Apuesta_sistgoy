@@ -1,3 +1,13 @@
+import os
+import logging
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler
+from generar_pronosticos_multi_pdf import generar_pdf_multi_ligas
+import pronostico
+from estadisticas_ligas import EstadisticasLiga
+import datetime
+from ligas_config import LIGAS
+
 async def menu_principal_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = update.message.text
     if texto == "📅 Partidos de Hoy":
