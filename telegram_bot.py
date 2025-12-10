@@ -53,12 +53,13 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     break
                 except Exception:
                     continue
-            if fecha_obj == hoy and p.get('ResultadoReal', 'N/A') == 'N/A':
-                partidos_hoy.append(f"{nombre_liga}: {p['Local']} vs {p['Visita']} - {p['MarcadorProbable']} ({p['ProbLocal']:.0f}%/{p['ProbEmpate']:.0f}%/{p['ProbVisita']:.0f}%)")
+            if fecha_obj == hoy:
+                estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
+                partidos_hoy.append(f"{nombre_liga}: {p['Local']} vs {p['Visita']} - {p['MarcadorProbable']} ({p['ProbLocal']:.0f}%/{p['ProbEmpate']:.0f}%/{p['ProbVisita']:.0f}%) [{estado}]")
     if partidos_hoy:
-        mensaje = "Encuentros por jugar hoy:\n" + "\n".join(partidos_hoy)
+        mensaje = "Partidos de hoy:\n" + "\n".join(partidos_hoy)
     else:
-        mensaje = "No hay partidos pendientes para hoy."
+        mensaje = "No hay partidos para hoy."
     await update.message.reply_text(mensaje)
 
 if __name__ == '__main__':
