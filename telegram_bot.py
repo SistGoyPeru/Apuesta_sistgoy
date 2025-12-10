@@ -133,6 +133,7 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- BLOQUE PRINCIPAL ---
 import asyncio
 
+
 async def main():
     TOKEN = os.getenv("TELEGRAM_TOKEN")
     if not TOKEN:
