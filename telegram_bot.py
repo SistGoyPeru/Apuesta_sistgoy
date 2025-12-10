@@ -1,8 +1,17 @@
-# Importar LIGAS al inicio del archivo
+
+# --- IMPORTS NECESARIOS ---
+import os
+import logging
+import datetime
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import (
+    ContextTypes, MessageHandler, filters, ConversationHandler,
+    ApplicationBuilder, CommandHandler
+)
+from generar_pronosticos_multi_pdf import generar_pdf_multi_ligas
+import pronostico
+from estadisticas_ligas import EstadisticasLiga
 from ligas_config import LIGAS
-# --- IMPORTS NECESARIOS PARA LOS HANDLERS ---
-from telegram import Update
-from telegram.ext import ContextTypes
 
 
 
