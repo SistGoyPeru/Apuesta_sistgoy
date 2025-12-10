@@ -47,7 +47,6 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for p in todos:
             fecha_partido = p.get('Fecha')
             fecha_obj = None
-            # Si ya es tipo date, úsalo directo
             if hasattr(fecha_partido, 'year') and hasattr(fecha_partido, 'month') and hasattr(fecha_partido, 'day'):
                 fecha_obj = datetime.date(fecha_partido.year, fecha_partido.month, fecha_partido.day)
             else:
@@ -59,9 +58,19 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         continue
             if fecha_obj == hoy:
                 estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
-                partidos_hoy.append(f"{nombre_liga}: {p['Local']} vs {p['Visita']} - {p['MarcadorProbable']} ({p['ProbLocal']:.0f}%/{p['ProbEmpate']:.0f}%/{p['ProbVisita']:.0f}%) [{estado}]")
+                partidos_hoy.append(
+                    f"Liga: {nombre_liga}\n"
+                    f"Jornada: {p.get('Jornada', '')}\n"
+                    f"Fecha: {fecha_obj.strftime('%d/%m/%Y')}\n"
+                    f"Local: {p['Local']}\n"
+                    f"Visita: {p['Visita']}\n"
+                    f"Marcador Probable: {p['MarcadorProbable']}\n"
+                    f"Probabilidades: Local {p['ProbLocal']:.0f}%, Empate {p['ProbEmpate']:.0f}%, Visita {p['ProbVisita']:.0f}%\n"
+                    f"Estado: {estado}\n"
+                    "-----------------------------"
+                )
     if partidos_hoy:
-        mensaje = "Partidos de hoy:\n" + "\n".join(partidos_hoy)
+        mensaje = "\n".join(partidos_hoy)
     else:
         mensaje = "No hay partidos para hoy."
     await update.message.reply_text(mensaje)
