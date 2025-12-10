@@ -139,6 +139,7 @@ async def handle_tipo_consulta(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("Opción no reconocida. Elige una opción del teclado.")
         return TIPO_CONSULTA
 
+
 from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes, MessageHandler, filters, ConversationHandler, ApplicationBuilder, CommandHandler
 import os
