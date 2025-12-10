@@ -36,11 +36,27 @@ async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAUL
     total_jugados = estadisticas.total_partidos_jugados()
     total_liga = estadisticas.total_partidos_liga()
     goles_prom = estadisticas.media_goles()
+    over_15 = estadisticas.porcentaje_over_15()
+    over_25 = estadisticas.porcentaje_over_25()
+    under_15 = estadisticas.porcentaje_under_15()
+    under_25 = estadisticas.porcentaje_under_25()
+    victorias_local = estadisticas.porcentaje_victorias_local() if hasattr(estadisticas, 'porcentaje_victorias_local') else 0
+    empates = estadisticas.porcentaje_empates() if hasattr(estadisticas, 'porcentaje_empates') else 0
+    victorias_visita = estadisticas.porcentaje_victorias_visita() if hasattr(estadisticas, 'porcentaje_victorias_visita') else 0
+    ambos_marcan = estadisticas.porcentaje_ambos_marcan() if hasattr(estadisticas, 'porcentaje_ambos_marcan') else 0
     await update.message.reply_text(
         f"<b>Estadísticas de {liga}</b>\n"
         f"Partidos jugados: {total_jugados}\n"
         f"Total partidos en liga: {total_liga}\n"
-        f"Promedio de goles por partido: {goles_prom:.2f}",
+        f"Promedio de goles por partido: {goles_prom:.2f}\n"
+        f"\n<b>Over/Under:</b>\n"
+        f"Over 1.5: {over_15:.1f}% | Over 2.5: {over_25:.1f}%\n"
+        f"Under 1.5: {under_15:.1f}% | Under 2.5: {under_25:.1f}%\n"
+        f"\n<b>Resultados:</b>\n"
+        f"Victorias local: {victorias_local:.1f}%\n"
+        f"Empates: {empates:.1f}%\n"
+        f"Victorias visita: {victorias_visita:.1f}%\n"
+        f"Ambos marcan: {ambos_marcan:.1f}%\n",
         parse_mode='HTML'
     )
     return ConversationHandler.END
