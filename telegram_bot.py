@@ -277,9 +277,18 @@ if __name__ == '__main__':
     )
     app.add_handler(conv_ligas)
 
-    # Handler para botones del menú principal
+    # Handler para botones del menú principal (solo textos exactos de los botones)
+    from telegram.ext import filters as tg_filters
+    botones_principales = [
+        "📅 Partidos de Hoy",
+        "📊 Ligas y Estadísticas",
+        "📄 Reporte PDF",
+        "ℹ️ Ayuda",
+        "Menú principal"
+    ]
+    filtro_botones = tg_filters.TEXT & tg_filters.Regex(f"^({'|'.join([b.replace(' ', '\\s') for b in botones_principales])})$")
     app.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND,
+        filtro_botones,
         menu_principal_handler
     ))
 
