@@ -17,7 +17,7 @@ logging.basicConfig(
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         with open("LOGO.JPG", "rb") as logo_file:
-            await update.message.reply_photo(photo=logo_file)
+            await update.message.reply_photo(photo=logo_file, caption="\n\n", width=512)
     except Exception:
         pass
     await update.message.reply_text(
