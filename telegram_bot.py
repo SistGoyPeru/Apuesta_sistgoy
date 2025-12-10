@@ -1,3 +1,34 @@
+# --- STUBS DE HANDLERS PRINCIPALES ---
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Bienvenido a SistGoy Apuestas (stub)")
+
+async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Generando reporte (stub)")
+
+async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Partidos de hoy (stub)")
+# --- STUBS Y CONSTANTES FALTANTES ---
+MENU, LIGA_ESTADISTICAS, LIGA, TIPO_CONSULTA = range(4)
+
+async def menu_avanzado(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Menú avanzado (stub)")
+    return LIGA
+
+async def handle_liga(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Liga seleccionada (stub)")
+    return TIPO_CONSULTA
+
+async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Menú principal (stub)")
+    return MENU
+
+async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Opción de menú (stub)")
+    return LIGA_ESTADISTICAS
+
+async def handle_liga_estadisticas(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Estadísticas de liga (stub)")
+    return ConversationHandler.END
 from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes, MessageHandler, filters, ConversationHandler, ApplicationBuilder, CommandHandler
 import os
@@ -314,8 +345,9 @@ if __name__ == "__main__":
 
     # ...existing code...
 
-    # BLOQUE PRINCIPAL
-    if __name__ == "__main__":
+    import asyncio
+
+    async def main():
         TOKEN = os.getenv("TELEGRAM_TOKEN")
         if not TOKEN:
             print("Error: No se encontró la variable de entorno TELEGRAM_TOKEN")
@@ -346,4 +378,7 @@ if __name__ == "__main__":
         )
         app.add_handler(conv_handler)
         print("--- BOT INICIADO ---")
-        app.run_polling()
+        await app.run_polling()
+
+    if __name__ == "__main__":
+        asyncio.run(main())
