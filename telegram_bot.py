@@ -138,7 +138,7 @@ async def handle_liga_estadisticas(update: Update, context: ContextTypes.DEFAULT
         f"Promedio de goles por partido: {goles_prom:.2f}"
     )
     return ConversationHandler.END
-import os
+
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
@@ -259,8 +259,7 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Mostrar estadísticas de cada liga aunque no haya partidos
     for nombre_liga, url_liga in LIGAS.items():
         estadisticas = EstadisticasLiga(url_liga)
-import os
-import logging
+
 from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes
 
@@ -517,27 +516,12 @@ async def main():
     app.add_handler(conv_handler)
 
     import asyncio
-    import sys
     async def main():
         await app.run_polling()
 
     if __name__ == "__main__":
-        try:
-            try:
-                loop = asyncio.get_running_loop()
-                try:
-                    import nest_asyncio
-                except ImportError:
-                    import subprocess
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", "nest_asyncio"])
-                    import nest_asyncio
-                nest_asyncio.apply()
-                asyncio.ensure_future(main())
-            except RuntimeError:
-                loop = asyncio.get_event_loop()
-                loop.run_until_complete(main())
-        except Exception as e:
-            print(f"Error ejecutando el bot: {e}")
+        import asyncio
+        asyncio.run(main())
 
 if __name__ == "__main__":
     try:
