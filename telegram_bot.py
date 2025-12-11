@@ -131,6 +131,7 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 def cuota(prob):
                     return round(1/(prob/100), 2) if prob > 0 else 'N/A'
                 partidos_hoy.append(
+                    
                     f"Liga: {nombre_liga}\n"
                     f"Jornada: {p.get('Jornada', '')}\n"
                     f"Fecha: {fecha_obj.strftime('%d/%m/%Y')}\n"
