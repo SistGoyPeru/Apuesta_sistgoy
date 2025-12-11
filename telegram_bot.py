@@ -239,7 +239,36 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     except Exception:
                         continue
             print(f"[DEPURACIÓN] Fecha partido: {fecha_obj} (tipo: {type(fecha_obj)})")
-            if fecha_obj == hoy:
+            # Comparar robustamente la fecha
+            if fecha_obj:
+                try:
+                    fecha_str = fecha_obj.strftime('%Y-%m-%d') if hasattr(fecha_obj, 'strftime') else str(fecha_obj)
+                    hoy_str = hoy.strftime('%Y-%m-%d')
+                    if fecha_str == hoy_str or str(fecha_obj) == str(hoy):
+                        estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
+                        hora = p.get('Hora', '')
+                        hora_str = f"Hora: {hora}\n" if hora else ""
+                        def cuota(prob):
+                            return round(1/(prob/100), 2) if prob > 0 else 'N/A'
+                        partidos_hoy.append(
+                            f"<b>{nombre_liga}</b>\n"
+                            f"<b>Jornada:</b> {p.get('Jornada', '')} | <b>Fecha:</b> {fecha_obj}\n"
+                            f"{hora_str}"
+                            f"<b>Local:</b> {p.get('EquipoLocal', p.get('Local', ''))} vs <b>Visita:</b> {p.get('EquipoVisita', p.get('Visita', ''))}\n"
+                            f"<b>Marcador Probable:</b> {p['MarcadorProbable']}\n"
+                            f"<b>Pronósticos y cuotas:</b>\n"
+                            f"Local: {p.get('ProbLocal', 0):.0f}% (Cuota: {cuota(p.get('ProbLocal', 0))})\n"
+                            f"Empate: {p.get('ProbEmpate', 0):.0f}% (Cuota: {cuota(p.get('ProbEmpate', 0))})\n"
+                            f"Visita: {p.get('ProbVisita', 0):.0f}% (Cuota: {cuota(p.get('ProbVisita', 0))})\n"
+                            f"Under 3.5: {p.get('ProbUnder35', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder35', 0))})\n"
+                            f"Under 4.5: {p.get('ProbUnder45', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder45', 0))})\n"
+                            f"Under 5.5: {p.get('ProbUnder55', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder55', 0))})\n"
+                            f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}% (Cuota: {cuota(p.get('ProbAmbosMarcan', 0))}) | No {p.get('ProbNoAmbosMarcan', 0):.0f}% (Cuota: {cuota(p.get('ProbNoAmbosMarcan', 0))})\n"
+                            f"<b>Estado:</b> {estado}\n"
+                            "<hr>"
+                        )
+                except Exception as e:
+                    print(f"[DEPURACIÓN] Error comparando fechas: {fecha_obj} vs {hoy}: {e}")
                 estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
                 hora = p.get('Hora', '')
                 hora_str = f"Hora: {hora}\n" if hora else ""
