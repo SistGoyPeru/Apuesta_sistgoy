@@ -209,6 +209,7 @@ async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     loading_msg = await update.message.reply_text("⚽️ Buscando partidos de hoy, por favor espera...")
     hoy = datetime.date.today()
+    print(f"[DEPURACIÓN] Fecha de hoy: {hoy}")
     partidos_hoy = []
     for nombre_liga, url_liga in LIGAS.items():
         try:
@@ -237,6 +238,7 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         break
                     except Exception:
                         continue
+            print(f"[DEPURACIÓN] Fecha partido: {fecha_obj} (tipo: {type(fecha_obj)})")
             if fecha_obj == hoy:
                 estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
                 hora = p.get('Hora', '')
