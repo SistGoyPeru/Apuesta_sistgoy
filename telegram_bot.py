@@ -1,38 +1,6 @@
-import matplotlib.pyplot as plt
-import io
 import os
 import logging
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler
-from generar_pronosticos_multi_pdf import generar_pdf_multi_ligas
-import pronostico
-from estadisticas_ligas import EstadisticasLiga
-import datetime
-from ligas_config import LIGAS
-
-async def menu_principal_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    texto = update.message.text
-    if texto == "📅 Partidos de Hoy":
-        await partidos_hoy(update, context)
-    elif texto == "📊 Ligas y Estadísticas":
-        await menu_ligas(update, context)
-    elif texto == "📄 Reporte PDF":
-        await generar_reporte(update, context)
-    elif texto == "ℹ️ Ayuda":
-        await update.message.reply_text(
-            "<b>Ayuda SistGoy</b>\n\n"
-            "• <b>Partidos de Hoy:</b> Muestra los partidos y pronósticos del día.\n"
-            "• <b>Ligas y Estadísticas:</b> Consulta estadísticas y pronósticos de cada liga.\n"
-            "• <b>Reporte PDF:</b> Descarga un reporte completo de pronósticos.\n"
-            "• <b>Menú principal:</b> Vuelve a la portada.\n\n"
-            "<i>Para cualquier consulta, escribe /start para volver al menú principal.</i>",
-            parse_mode='HTML'
-        )
-    else:
-        await update.message.reply_text("Por favor, selecciona una opción válida del menú.")
-import os
-import logging
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler
 from generar_pronosticos_multi_pdf import generar_pdf_multi_ligas
 import pronostico
@@ -53,10 +21,6 @@ async def menu_ligas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['ligas_lista'] = ligas
     return ESCOGIENDO_LIGA
 
-from telegram import ReplyKeyboardMarkup
-
-ESCOGIENDO_PARTIDO = 101
-
 async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ligas = context.user_data.get('ligas_lista', list(LIGAS.keys()))
     try:
@@ -69,92 +33,32 @@ async def mostrar_estadisticas_liga(update: Update, context: ContextTypes.DEFAUL
     liga = ligas[num-1]
     url_liga = LIGAS[liga]
     estadisticas = EstadisticasLiga(url_liga)
-    context.user_data['liga_seleccionada'] = liga
-    context.user_data['estadisticas_liga'] = estadisticas
-    # Mostrar próximos partidos como menú
-    partidos = estadisticas.df.filter((estadisticas.df['GA'].is_null()) & (estadisticas.df['GV'].is_null()))
-    if partidos.height == 0:
-        await update.message.reply_text(
-            "No hay partidos próximos para esta liga. Puedes volver al menú principal con /start.",
-            reply_markup=ReplyKeyboardMarkup([["Menú principal"]], resize_keyboard=True)
-        )
-        return ConversationHandler.END
-    texto = f"<b>Próximos encuentros de {liga}:</b>\n\n"
-    keyboard = []
-    lista_partidos = []
-    for idx, row in enumerate(partidos.iter_rows(named=True), 1):
-        local = row["Local"]
-        visita = row["Visita"]
-        jornada = row.get("Jornada", "")
-        fecha = row.get("Fecha", "")
-        texto += f"{idx}. {local} vs {visita} | Jornada: {jornada} | Fecha: {fecha}\n"
-        keyboard.append([f"{idx}"])
-        lista_partidos.append((local, visita, jornada, fecha))
-    texto += "\nResponde con el número del partido para ver análisis y pronóstico."
-    context.user_data['partidos_liga'] = lista_partidos
-    await update.message.reply_text(texto, parse_mode='HTML', reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True))
-    return ESCOGIENDO_PARTIDO
-
-async def mostrar_analisis_partido(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        num = int(update.message.text.strip())
-        partidos = context.user_data.get('partidos_liga', [])
-        if num < 1 or num > len(partidos):
-            raise ValueError
-    except ValueError:
-        await update.message.reply_text("Por favor, responde con el número del partido.")
-        return ESCOGIENDO_PARTIDO
-    local, visita, jornada, fecha = context.user_data['partidos_liga'][num-1]
-    liga = context.user_data.get('liga_seleccionada', '')
-    estadisticas = context.user_data.get('estadisticas_liga')
-    pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
-    pred = pronostico_poisson.predecir_partido(local, visita)
-    fuerza_local = pronostico_poisson.fuerzas.get(local, {})
-    fuerza_visita = pronostico_poisson.fuerzas.get(visita, {})
-    if not pred:
-        await update.message.reply_text(
-            "No hay datos suficientes para mostrar el pronóstico de este partido. Puedes intentar con otro partido o volver al menú principal con /start.",
-            reply_markup=ReplyKeyboardMarkup([["Menú principal"]], resize_keyboard=True)
-        )
-        return ConversationHandler.END
-    mensaje = (
-        f"<b>{liga} - Jornada {jornada} ({fecha})</b>\n"
-        f"<b>{local}</b> vs <b>{visita}</b>\n\n"
-        f"<b>Pronóstico:</b>\n"
-        f"Marcador probable: {pred['MarcadorProbable']}\n"
-        f"Local: {pred['ProbLocal']:.1f}% | Empate: {pred['ProbEmpate']:.1f}% | Visita: {pred['ProbVisita']:.1f}%\n"
-        f"Over 1.5: {pred['ProbOver15']:.1f}% | Over 2.5: {pred['ProbOver25']:.1f}%\n"
-        f"Ambos marcan: Sí {pred['ProbAmbosMarcan']:.1f}% | No {pred['ProbNoAmbosMarcan']:.1f}%\n\n"
-        f"<b>Estadísticas {local} (local):</b>\n"
-        f"Ataque: {fuerza_local.get('local', {}).get('ataque', 0):.2f} | Defensa: {fuerza_local.get('local', {}).get('defensa', 0):.2f}\n"
-        f"<b>Estadísticas {visita} (visita):</b>\n"
-        f"Ataque: {fuerza_visita.get('visita', {}).get('ataque', 0):.2f} | Defensa: {fuerza_visita.get('visita', {}).get('defensa', 0):.2f}\n"
+    total_jugados = estadisticas.total_partidos_jugados()
+    total_liga = estadisticas.total_partidos_liga()
+    goles_prom = estadisticas.media_goles()
+    over_15 = estadisticas.porcentaje_over_15()
+    over_25 = estadisticas.porcentaje_over_25()
+    under_15 = estadisticas.porcentaje_under_15()
+    under_25 = estadisticas.porcentaje_under_25()
+    victorias_local = estadisticas.porcentaje_victorias_local() if hasattr(estadisticas, 'porcentaje_victorias_local') else 0
+    empates = estadisticas.porcentaje_empates() if hasattr(estadisticas, 'porcentaje_empates') else 0
+    victorias_visita = estadisticas.porcentaje_victorias_visita() if hasattr(estadisticas, 'porcentaje_victorias_visita') else 0
+    ambos_marcan = estadisticas.porcentaje_ambos_marcan() if hasattr(estadisticas, 'porcentaje_ambos_marcan') else 0
+    await update.message.reply_text(
+        f"<b>Estadísticas de {liga}</b>\n"
+        f"Partidos jugados: {total_jugados}\n"
+        f"Total partidos en liga: {total_liga}\n"
+        f"Promedio de goles por partido: {goles_prom:.2f}\n"
+        f"\n<b>Over/Under:</b>\n"
+        f"Over 1.5: {over_15:.1f}% | Over 2.5: {over_25:.1f}%\n"
+        f"Under 1.5: {under_15:.1f}% | Under 2.5: {under_25:.1f}%\n"
+        f"\n<b>Resultados:</b>\n"
+        f"Victorias local: {victorias_local:.1f}%\n"
+        f"Empates: {empates:.1f}%\n"
+        f"Victorias visita: {victorias_visita:.1f}%\n"
+        f"Ambos marcan: {ambos_marcan:.1f}%\n",
+        parse_mode='HTML'
     )
-
-    # Gráfico de barras comparativo
-    try:
-        fig, ax = plt.subplots(figsize=(6, 4))
-        categorias = [f"{local}\nAtaque", f"{local}\nDefensa", f"{visita}\nAtaque", f"{visita}\nDefensa"]
-        valores = [
-            fuerza_local.get('local', {}).get('ataque', 0),
-            fuerza_local.get('local', {}).get('defensa', 0),
-            fuerza_visita.get('visita', {}).get('ataque', 0),
-            fuerza_visita.get('visita', {}).get('defensa', 0)
-        ]
-        colores = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0']
-        ax.bar(categorias, valores, color=colores)
-        ax.set_ylabel('Fuerza')
-        ax.set_title('Comparativa Ataque/Defensa')
-        plt.tight_layout()
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-        plt.close(fig)
-        await update.message.reply_photo(photo=buf, caption="Comparativa visual de fuerzas de ataque y defensa")
-    except Exception:
-        await update.message.reply_text("No se pudo generar el gráfico. Puedes volver al menú principal con /start.")
-
-    await update.message.reply_text(mensaje, parse_mode='HTML', reply_markup=ReplyKeyboardMarkup([["Menú principal"]], resize_keyboard=True))
     return ConversationHandler.END
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -167,27 +71,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_photo(photo=logo_file, caption="\n\n", width=512)
     except Exception:
         pass
-
-    # Menú principal con botones
-    keyboard = [
-        [KeyboardButton("📅 Partidos de Hoy"), KeyboardButton("📊 Ligas y Estadísticas")],
-        [KeyboardButton("📄 Reporte PDF"), KeyboardButton("ℹ️ Ayuda")]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-    bienvenida = (
+    await update.message.reply_text(
         "<b>🏟️🎲 ¡Bienvenido a SistGoy Apuestas! 🎲🏟️</b>\n\n"
         "<b>Tu casa de apuestas y estadísticas de fútbol 24/7</b> ⚽️🔥\n\n"
-        "<b>Menú principal:</b>\n"
-        "Selecciona una opción con los botones de abajo 👇\n\n"
+        "<b>Comandos rápidos:</b>\n"
+        "• <b>/hoy</b> - Partidos y pronósticos del día\n"
+        "• <b>/pdf</b> - Reporte PDF de pronósticos\n"
+        "• <b>/ligas</b> - Menú de ligas y estadísticas\n"
+        "• <b>/start</b> - Menú principal\n\n"
         "<b>¿Qué te ofrecemos?</b>\n"
         "🎯 Pronósticos AI y estadísticas avanzadas\n"
         "📊 Over/Under, Doble oportunidad, Ambos marcan\n"
         "💸 ¡Aumenta tus chances y apuesta informado!\n"
         "📥 Descarga reportes y consulta resultados en tiempo real\n\n"
         "<i>¡Suerte y que ruede el balón! ⚽️💰</i>"
-    )
-    await update.message.reply_text(bienvenida, parse_mode='HTML', reply_markup=reply_markup)
+    , parse_mode='HTML')
 
 async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -209,24 +107,12 @@ async def generar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     loading_msg = await update.message.reply_text("⚽️ Buscando partidos de hoy, por favor espera...")
     hoy = datetime.date.today()
-    print(f"[DEPURACIÓN] Fecha de hoy: {hoy}")
     partidos_hoy = []
     for nombre_liga, url_liga in LIGAS.items():
-        try:
-            estadisticas = EstadisticasLiga(url_liga)
-            if estadisticas.df.is_empty():
-                print(f"[DEPURACIÓN] Sin datos para {nombre_liga} ({url_liga})")
-                continue
-            pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
-            todos = pronostico_poisson.calcular_pronosticos_todos()
-            if not todos:
-                print(f"[DEPURACIÓN] Sin pronósticos para {nombre_liga}")
-            for p in todos:
-                # ...existing code...
-                pass
-        except Exception as e:
-            print(f"[DEPURACIÓN] Error en {nombre_liga}: {e}")
-            continue
+        estadisticas = EstadisticasLiga(url_liga)
+        pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
+        todos = pronostico_poisson.calcular_pronosticos_todos()
+        for p in todos:
             fecha_partido = p.get('Fecha')
             fecha_obj = None
             if hasattr(fecha_partido, 'year') and hasattr(fecha_partido, 'month') and hasattr(fecha_partido, 'day'):
@@ -238,65 +124,31 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         break
                     except Exception:
                         continue
-            print(f"[DEPURACIÓN] Fecha partido: {fecha_obj} (tipo: {type(fecha_obj)})")
-            # Comparar robustamente la fecha
-            if fecha_obj:
-                try:
-                    fecha_str = fecha_obj.strftime('%Y-%m-%d') if hasattr(fecha_obj, 'strftime') else str(fecha_obj)
-                    hoy_str = hoy.strftime('%Y-%m-%d')
-                    if fecha_str == hoy_str or str(fecha_obj) == str(hoy):
-                        estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
-                        hora = p.get('Hora', '')
-                        hora_str = f"Hora: {hora}\n" if hora else ""
-                        def cuota(prob):
-                            return round(1/(prob/100), 2) if prob > 0 else 'N/A'
-                        partidos_hoy.append(
-                            f"<b>{nombre_liga}</b>\n"
-                            f"<b>Jornada:</b> {p.get('Jornada', '')} | <b>Fecha:</b> {fecha_obj}\n"
-                            f"{hora_str}"
-                            f"<b>Local:</b> {p.get('EquipoLocal', p.get('Local', ''))} vs <b>Visita:</b> {p.get('EquipoVisita', p.get('Visita', ''))}\n"
-                            f"<b>Marcador Probable:</b> {p['MarcadorProbable']}\n"
-                            f"<b>Pronósticos y cuotas:</b>\n"
-                            f"Local: {p.get('ProbLocal', 0):.0f}% (Cuota: {cuota(p.get('ProbLocal', 0))})\n"
-                            f"Empate: {p.get('ProbEmpate', 0):.0f}% (Cuota: {cuota(p.get('ProbEmpate', 0))})\n"
-                            f"Visita: {p.get('ProbVisita', 0):.0f}% (Cuota: {cuota(p.get('ProbVisita', 0))})\n"
-                            f"Under 3.5: {p.get('ProbUnder35', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder35', 0))})\n"
-                            f"Under 4.5: {p.get('ProbUnder45', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder45', 0))})\n"
-                            f"Under 5.5: {p.get('ProbUnder55', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder55', 0))})\n"
-                            f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}% (Cuota: {cuota(p.get('ProbAmbosMarcan', 0))}) | No {p.get('ProbNoAmbosMarcan', 0):.0f}% (Cuota: {cuota(p.get('ProbNoAmbosMarcan', 0))})\n"
-                            f"<b>Estado:</b> {estado}\n"
-                            "<hr>"
-                        )
-                except Exception as e:
-                    print(f"[DEPURACIÓN] Error comparando fechas: {fecha_obj} vs {hoy}: {e}")
+            if fecha_obj == hoy:
                 estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
                 hora = p.get('Hora', '')
                 hora_str = f"Hora: {hora}\n" if hora else ""
-                # Cuotas reales: 1/(porcentaje/100)
-                def cuota(prob):
-                    return round(1/(prob/100), 2) if prob > 0 else 'N/A'
                 partidos_hoy.append(
-                    f"<b>{nombre_liga}</b>\n"
-                    f"<b>Jornada:</b> {p.get('Jornada', '')} | <b>Fecha:</b> {fecha_obj.strftime('%d/%m/%Y')}\n"
+                    f"Liga: {nombre_liga}\n"
+                    f"Jornada: {p.get('Jornada', '')}\n"
+                    f"Fecha: {fecha_obj.strftime('%d/%m/%Y')}\n"
                     f"{hora_str}"
-                    f"<b>Local:</b> {p.get('EquipoLocal', p.get('Local', ''))} vs <b>Visita:</b> {p.get('EquipoVisita', p.get('Visita', ''))}\n"
-                    f"<b>Marcador Probable:</b> {p['MarcadorProbable']}\n"
-                    f"<b>Pronósticos y cuotas:</b>\n"
-                    f"Local: {p.get('ProbLocal', 0):.0f}% (Cuota: {cuota(p.get('ProbLocal', 0))})\n"
-                    f"Empate: {p.get('ProbEmpate', 0):.0f}% (Cuota: {cuota(p.get('ProbEmpate', 0))})\n"
-                    f"Visita: {p.get('ProbVisita', 0):.0f}% (Cuota: {cuota(p.get('ProbVisita', 0))})\n"
-                    f"Under 3.5: {p.get('ProbUnder35', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder35', 0))})\n"
-                    f"Under 4.5: {p.get('ProbUnder45', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder45', 0))})\n"
-                    f"Under 5.5: {p.get('ProbUnder55', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder55', 0))})\n"
-                    f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}% (Cuota: {cuota(p.get('ProbAmbosMarcan', 0))}) | No {p.get('ProbNoAmbosMarcan', 0):.0f}% (Cuota: {cuota(p.get('ProbNoAmbosMarcan', 0))})\n"
-                    f"<b>Estado:</b> {estado}\n"
-                    "<hr>"
+                    f"Local: {p.get('EquipoLocal', p.get('Local', ''))}\n"
+                    f"Visita: {p.get('EquipoVisita', p.get('Visita', ''))}\n"
+                    f"Marcador Probable: {p['MarcadorProbable']}\n"
+                    f"Probabilidades: Local {p['ProbLocal']:.0f}%, Empate {p['ProbEmpate']:.0f}%, Visita {p['ProbVisita']:.0f}%\n"
+                    f"Doble oportunidad: 1X {p.get('Prob1X', 0):.0f}%, 12 {p.get('Prob12', 0):.0f}%, X2 {p.get('ProbX2', 0):.0f}%\n"
+                    f"Over 0.5: {p.get('ProbOver05', 0):.0f}% | Over 1.5: {p.get('ProbOver15', 0):.0f}% | Over 2.5: {p.get('ProbOver25', 0):.0f}%\n"
+                    f"Under 0.5: {p.get('ProbUnder05', 0):.0f}% | Under 1.5: {p.get('ProbUnder15', 0):.0f}% | Under 2.5: {p.get('ProbUnder25', 0):.0f}%\n"
+                    f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%, No {p.get('ProbNoAmbosMarcan', 0):.0f}%\n"
+                    f"Estado: {estado}\n"
+                    "-----------------------------"
                 )
     if partidos_hoy:
         mensaje = "\n".join(partidos_hoy)
     else:
-        mensaje = "No hay partidos para hoy. (Ver consola/logs para depuración)"
-    await update.message.reply_text(mensaje, parse_mode='HTML')
+        mensaje = "No hay partidos para hoy."
+    await update.message.reply_text(mensaje)
 
 if __name__ == '__main__':
         # ConversationHandler para menú de ligas
@@ -312,31 +164,15 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("pdf", generar_reporte))
     app.add_handler(CommandHandler("hoy", partidos_hoy))
 
-    # ConversationHandler para menú de ligas (debe ir antes que el handler general de texto)
+    # ConversationHandler para menú de ligas
     conv_ligas = ConversationHandler(
         entry_points=[CommandHandler("ligas", menu_ligas)],
         states={
-            ESCOGIENDO_LIGA: [MessageHandler(filters.TEXT & ~filters.COMMAND, mostrar_estadisticas_liga)],
-            ESCOGIENDO_PARTIDO: [MessageHandler(filters.TEXT & ~filters.COMMAND, mostrar_analisis_partido)]
+            ESCOGIENDO_LIGA: [MessageHandler(filters.TEXT & ~filters.COMMAND, mostrar_estadisticas_liga)]
         },
         fallbacks=[CommandHandler("ligas", menu_ligas)]
     )
     app.add_handler(conv_ligas)
-
-    # Handler para botones del menú principal (solo textos exactos de los botones)
-    from telegram.ext import filters as tg_filters
-    botones_principales = [
-        "📅 Partidos de Hoy",
-        "📊 Ligas y Estadísticas",
-        "📄 Reporte PDF",
-        "ℹ️ Ayuda",
-        "Menú principal"
-    ]
-    filtro_botones = tg_filters.TEXT & tg_filters.Regex(f"^({'|'.join([b.replace(' ', '\\s') for b in botones_principales])})$")
-    app.add_handler(MessageHandler(
-        filtro_botones,
-        menu_principal_handler
-    ))
 
     print("--- BOT INICIADO ---")
     app.run_polling()
