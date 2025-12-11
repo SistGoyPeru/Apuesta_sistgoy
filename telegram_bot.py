@@ -128,6 +128,8 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
                 hora = p.get('Hora', '')
                 hora_str = f"Hora: {hora}\n" if hora else ""
+                def cuota(prob):
+                    return round(1/(prob/100), 2) if prob > 0 else 'N/A'
                 partidos_hoy.append(
                     f"Liga: {nombre_liga}\n"
                     f"Jornada: {p.get('Jornada', '')}\n"
@@ -139,7 +141,9 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"Probabilidades: Local {p['ProbLocal']:.0f}%, Empate {p['ProbEmpate']:.0f}%, Visita {p['ProbVisita']:.0f}%\n"
                     f"Doble oportunidad: 1X {p.get('Prob1X', 0):.0f}%, 12 {p.get('Prob12', 0):.0f}%, X2 {p.get('ProbX2', 0):.0f}%\n"
                     f"Over 0.5: {p.get('ProbOver05', 0):.0f}% | Over 1.5: {p.get('ProbOver15', 0):.0f}% | Over 2.5: {p.get('ProbOver25', 0):.0f}%\n"
-                    f"Under 0.5: {p.get('ProbUnder05', 0):.0f}% | Under 1.5: {p.get('ProbUnder15', 0):.0f}% | Under 2.5: {p.get('ProbUnder25', 0):.0f}%\n"
+                    f"Under 3.5: {p.get('ProbUnder35', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder35', 0))}) | "
+                    f"Under 4.5: {p.get('ProbUnder45', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder45', 0))}) | "
+                    f"Under 5.5: {p.get('ProbUnder55', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder55', 0))})\n"
                     f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%, No {p.get('ProbNoAmbosMarcan', 0):.0f}%\n"
                     f"Estado: {estado}\n"
                     "-----------------------------"
