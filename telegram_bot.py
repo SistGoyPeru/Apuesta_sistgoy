@@ -230,27 +230,31 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
                 hora = p.get('Hora', '')
                 hora_str = f"Hora: {hora}\n" if hora else ""
+                # Cuotas reales: 1/(porcentaje/100)
+                def cuota(prob):
+                    return round(1/(prob/100), 2) if prob > 0 else 'N/A'
                 partidos_hoy.append(
-                    f"Liga: {nombre_liga}\n"
-                    f"Jornada: {p.get('Jornada', '')}\n"
-                    f"Fecha: {fecha_obj.strftime('%d/%m/%Y')}\n"
+                    f"<b>{nombre_liga}</b>\n"
+                    f"<b>Jornada:</b> {p.get('Jornada', '')} | <b>Fecha:</b> {fecha_obj.strftime('%d/%m/%Y')}\n"
                     f"{hora_str}"
-                    f"Local: {p.get('EquipoLocal', p.get('Local', ''))}\n"
-                    f"Visita: {p.get('EquipoVisita', p.get('Visita', ''))}\n"
-                    f"Marcador Probable: {p['MarcadorProbable']}\n"
-                    f"Probabilidades: Local {p['ProbLocal']:.0f}%, Empate {p['ProbEmpate']:.0f}%, Visita {p['ProbVisita']:.0f}%\n"
-                    f"Doble oportunidad: 1X {p.get('Prob1X', 0):.0f}%, 12 {p.get('Prob12', 0):.0f}%, X2 {p.get('ProbX2', 0):.0f}%\n"
-                    f"Over 0.5: {p.get('ProbOver05', 0):.0f}% | Over 1.5: {p.get('ProbOver15', 0):.0f}% | Over 2.5: {p.get('ProbOver25', 0):.0f}%\n"
-                    f"Under 0.5: {p.get('ProbUnder05', 0):.0f}% | Under 1.5: {p.get('ProbUnder15', 0):.0f}% | Under 2.5: {p.get('ProbUnder25', 0):.0f}%\n"
-                    f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}%, No {p.get('ProbNoAmbosMarcan', 0):.0f}%\n"
-                    f"Estado: {estado}\n"
-                    "-----------------------------"
+                    f"<b>Local:</b> {p.get('EquipoLocal', p.get('Local', ''))} vs <b>Visita:</b> {p.get('EquipoVisita', p.get('Visita', ''))}\n"
+                    f"<b>Marcador Probable:</b> {p['MarcadorProbable']}\n"
+                    f"<b>Pronósticos y cuotas:</b>\n"
+                    f"Local: {p.get('ProbLocal', 0):.0f}% (Cuota: {cuota(p.get('ProbLocal', 0))})\n"
+                    f"Empate: {p.get('ProbEmpate', 0):.0f}% (Cuota: {cuota(p.get('ProbEmpate', 0))})\n"
+                    f"Visita: {p.get('ProbVisita', 0):.0f}% (Cuota: {cuota(p.get('ProbVisita', 0))})\n"
+                    f"Under 3.5: {p.get('ProbUnder35', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder35', 0))})\n"
+                    f"Under 4.5: {p.get('ProbUnder45', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder45', 0))})\n"
+                    f"Under 5.5: {p.get('ProbUnder55', 0):.0f}% (Cuota: {cuota(p.get('ProbUnder55', 0))})\n"
+                    f"Ambos marcan: Sí {p.get('ProbAmbosMarcan', 0):.0f}% (Cuota: {cuota(p.get('ProbAmbosMarcan', 0))}) | No {p.get('ProbNoAmbosMarcan', 0):.0f}% (Cuota: {cuota(p.get('ProbNoAmbosMarcan', 0))})\n"
+                    f"<b>Estado:</b> {estado}\n"
+                    "<hr>"
                 )
     if partidos_hoy:
         mensaje = "\n".join(partidos_hoy)
     else:
         mensaje = "No hay partidos para hoy."
-    await update.message.reply_text(mensaje)
+    await update.message.reply_text(mensaje, parse_mode='HTML')
 
 if __name__ == '__main__':
         # ConversationHandler para menú de ligas
