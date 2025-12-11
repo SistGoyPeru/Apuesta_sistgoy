@@ -211,10 +211,21 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     hoy = datetime.date.today()
     partidos_hoy = []
     for nombre_liga, url_liga in LIGAS.items():
-        estadisticas = EstadisticasLiga(url_liga)
-        pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
-        todos = pronostico_poisson.calcular_pronosticos_todos()
-        for p in todos:
+        try:
+            estadisticas = EstadisticasLiga(url_liga)
+            if estadisticas.df.is_empty():
+                print(f"[DEPURACIÓN] Sin datos para {nombre_liga} ({url_liga})")
+                continue
+            pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
+            todos = pronostico_poisson.calcular_pronosticos_todos()
+            if not todos:
+                print(f"[DEPURACIÓN] Sin pronósticos para {nombre_liga}")
+            for p in todos:
+                # ...existing code...
+                pass
+        except Exception as e:
+            print(f"[DEPURACIÓN] Error en {nombre_liga}: {e}")
+            continue
             fecha_partido = p.get('Fecha')
             fecha_obj = None
             if hasattr(fecha_partido, 'year') and hasattr(fecha_partido, 'month') and hasattr(fecha_partido, 'day'):
@@ -253,7 +264,7 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if partidos_hoy:
         mensaje = "\n".join(partidos_hoy)
     else:
-        mensaje = "No hay partidos para hoy."
+        mensaje = "No hay partidos para hoy. (Ver consola/logs para depuración)"
     await update.message.reply_text(mensaje, parse_mode='HTML')
 
 if __name__ == '__main__':
