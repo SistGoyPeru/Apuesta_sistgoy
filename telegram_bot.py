@@ -108,6 +108,7 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     loading_msg = await update.message.reply_text("⚽️ Buscando partidos de hoy, por favor espera...")
     hoy = datetime.date.today()
     partidos_hoy = []
+    debug_fechas = []
     for nombre_liga, url_liga in LIGAS.items():
         estadisticas = EstadisticasLiga(url_liga)
         pronostico_poisson = pronostico.PronosticoPoisson(stats_liga=estadisticas)
@@ -124,6 +125,7 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         break
                     except Exception:
                         continue
+            debug_fechas.append(f"Liga: {nombre_liga} | Fecha partido: {fecha_partido} | fecha_obj: {fecha_obj} | hoy: {hoy}")
             if fecha_obj == hoy:
                 estado = "Pendiente" if p.get('ResultadoReal', 'N/A') == 'N/A' else f"Jugado ({p['ResultadoReal']})"
                 hora = p.get('Hora', '')
@@ -131,7 +133,6 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 def cuota(prob):
                     return round(1/(prob/100), 2) if prob > 0 else 'N/A'
                 partidos_hoy.append(
-                    
                     f"Liga: {nombre_liga}\n"
                     f"Jornada: {p.get('Jornada', '')}\n"
                     f"Fecha: {fecha_obj.strftime('%d/%m/%Y')}\n"
@@ -156,10 +157,11 @@ async def partidos_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"Estado: {estado}\n"
                     "-----------------------------"
                 )
-    if partidos_hoy:
-        mensaje = "\n".join(partidos_hoy)
+    # Enviar debug de fechas si no hay partidos
+    if not partidos_hoy:
+        mensaje = "No hay partidos para hoy.\n\nDEBUG FECHAS:\n" + "\n".join(debug_fechas[:20])
     else:
-        mensaje = "No hay partidos para hoy."
+        mensaje = "\n".join(partidos_hoy)
     await update.message.reply_text(mensaje)
 
 if __name__ == '__main__':
